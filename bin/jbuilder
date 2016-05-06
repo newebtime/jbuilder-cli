@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+/**
+ * @package    JBuilder
+ * @copyright  Copyright (c) 2003-2016 Frédéric Vandebeuque / Newebtime
+ * @license    Mozilla Public License, version 2.0
+ */
+
+$autoload = __DIR__.'/../vendor/autoload.php';
+
+if(is_file($autoload)) {
+	require $autoload;
+} else {
+	require __DIR__.'/../../../../vendor/autoload.php';
+}
+
+$application = new Newebtime\JbuilderCli\Application();
+$application->run();

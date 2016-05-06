@@ -75,7 +75,8 @@ class Application extends \Symfony\Component\Console\Application
 		$commands = parent::getDefaultCommands();
 
 		$commands = array_merge($commands, [
-			new Command\Base()
+			new Command\Project\Init(),
+			new Command\Project\Install()
 		]);
 
 		return $commands;

@@ -53,8 +53,11 @@ class Base extends Command
 		return $this;
 	}
 
-	protected function execute(InputInterface $input, OutputInterface $output)
+	protected function initIO(InputInterface $input, OutputInterface $output)
 	{
-		$this->io = new SymfonyStyle($input, $output);
+		if (!isset($this->io))
+		{
+			$this->io = new SymfonyStyle($input, $output);
+		}
 	}
 }

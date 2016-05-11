@@ -48,6 +48,7 @@ For now you will need to create at least one component.
 
 ## TODO
 
+- Create a composer.json with the packagename as name
 - Do some check and validation (package name, paths)
 - Add message during the Install (e.g. "Downloading Joomla, etc")
 - Create the command to link to fofcli command

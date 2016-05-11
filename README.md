@@ -4,6 +4,7 @@ JBuilder is a CLI tools that simplifies the creation of Joomla component.
 It is designed to work on Linux and MacOS.
 
 > It is temporaly instructions. I will need to create the composer project later.
+> JBuilder CLI is a WIP
 
 ## Installation
 
@@ -49,11 +50,4 @@ For now you will need to create at least one component.
 
 - Do some check and validation (package name, paths)
 - Add message during the Install (e.g. "Downloading Joomla, etc")
-- Create the command to create a new FOF component, we will need fofcli in some points
-	- Create the tree using fofcli
-	- Create component.xml and admin/fof.xml (MagicFactory)
-	- Maybe create the admin/access.xml and admin/config.xml
-	- Create the admin/component.php and site/component.php
-	- Automatic install in the Joomla demo
-	- Update the pkg_name
 - Create the command to link to fofcli command

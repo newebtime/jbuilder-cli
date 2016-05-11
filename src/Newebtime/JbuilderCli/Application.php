@@ -27,16 +27,6 @@ class Application extends \Symfony\Component\Console\Application
 	const NAME = 'Jbuilder Console tools';
 
 	/**
-	 * Reference to the Output\ConsoleOutput object
-	 */
-	protected $_output;
-
-	/**
-	 * Reference to the Input\ArgvInput object
-	 */
-	protected $_input;
-
-	/**
 	 * @inheritdoc
 	 */
 	public function __construct($name = 'UNKNOWN', $version = 'UNKNOWN')
@@ -49,20 +39,7 @@ class Application extends \Symfony\Component\Console\Application
 	 */
 	public function run(Input\InputInterface $input = null, Output\OutputInterface $output = null)
 	{
-		if (null === $input) {
-			$input = new Input\ArgvInput();
-		}
-
-		if (null === $output) {
-			$output = new Output\ConsoleOutput();
-		}
-
-		$this->_input  = $input;
-		$this->_output = $output;
-
-		$this->configureIO($this->_input, $this->_output);
-
-		parent::run($this->_input, $this->_output);
+		parent::run($input, $output);
 	}
 
 	/**
@@ -76,7 +53,8 @@ class Application extends \Symfony\Component\Console\Application
 
 		$commands = array_merge($commands, [
 			new Command\Project\Init(),
-			new Command\Project\Install()
+			new Command\Project\Install(),
+			new Command\Component\Add(),
 		]);
 
 		return $commands;

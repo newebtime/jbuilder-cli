@@ -119,7 +119,7 @@ class Init extends BaseCommand
 			]
 		];
 
-		file_put_contents($path . '.jbuilder', json_encode($jbuilder));
+		file_put_contents($path . '.jbuilder', json_encode($jbuilder, JSON_PRETTY_PRINT));
 
 		$this->initConfig()->createPackageXml();
 	}

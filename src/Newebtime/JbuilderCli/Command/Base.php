@@ -14,49 +14,34 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Base extends Command
 {
-	/**
-	 * @@inheritdoc
-	 */
-	protected function configure()
-	{
-		$this
-			->setName('optionName')
-			->setDescription('Option description')
-			->addOption(
-				'option-1',
-				null,
-				InputOption::VALUE_NONE,
-				'Description option-1'
-			)
-			->addOption(
-				'option-2',
-				null,
-				InputOption::VALUE_NONE,
-				'Description option-2'
-			);
-	}
+	protected $config;
+
+	protected $basePath;
 
 	/**
-	 * @@inheritdoc
+	 * @inheritdoc
 	 */
-	protected function execute(InputInterface $input, OutputInterface $output)
+	public function __construct($name = null)
 	{
-		if ($input->getOption('option-1')) {
-			$this->option1Method();
-		}
+		parent::__construct($name);
 
-		if ($input->getOption('option-2')) {
-			$this->option2Method();
-		}
+		$path = getcwd();
+		$path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+		$this->basePath = $path;
+
+		$this->initConfig();
 	}
 
-	public function option1Method()
+	public function initConfig()
 	{
-		//
-	}
+		$configPath = $this->basePath . '.jbuilder';
 
-	public function option2Method()
-	{
-		//
+		if (file_exists($configPath))
+		{
+			$this->config = json_decode(file_get_contents($configPath));
+		}
+
+		return $this;
 	}
 }

@@ -13,15 +13,14 @@ use Joomlatools\Console\Command\Site\Install as SiteInstall;
 use Joomlatools\Console\Command\Versions as Versions;
 use Joomlatools\Console\Joomla\Bootstrapper;
 
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class Install extends Command
-{
-	protected $config;
+use Newebtime\JbuilderCli\Command\Base as BaseCommand;
 
+class Install extends BaseCommand
+{
 	/**
 	 * @@inheritdoc
 	 */
@@ -29,7 +28,7 @@ class Install extends Command
 	{
 		$this
 			->setName('project:install')
-			->setDescription('Download and install the dependency for the project (Joomla, FOF)');
+			->setDescription('Download and install the dependency for the project (Joomla, FOF, package)');
 	}
 
 	/**
@@ -37,11 +36,6 @@ class Install extends Command
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$path = getcwd();
-		$path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-		$this->config = json_decode(file_get_contents($path . '.jbuilder'));
-
 		$this->installJoomla($input, $output);
 		$this->installFof($input, $output);
 
@@ -107,7 +101,7 @@ class Install extends Command
 		}
 
 		$resultPath = $result['dir'];
-		$destPath   = getcwd() . '/' . $this->config->paths->libraries . 'fof30';
+		$destPath   = getcwd() . '/' . $this->config->paths->src . $this->config->paths->libraries . 'fof30';
 
 		if (!\JFolder::copy($resultPath, $destPath))
 		{

@@ -7,14 +7,15 @@
 
 namespace Newebtime\JbuilderCli\Command\Project;
 
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
-class Init extends Command
+use Newebtime\JbuilderCli\Command\Base as BaseCommand;
+
+class Init extends BaseCommand
 {
 	/**
 	 * @@inheritdoc
@@ -63,15 +64,18 @@ class Init extends Command
 
 		$helper = $this->getHelper('question');
 
+		$question = new Question("<question>What is the package name?</question> [myproject]\n", 'myproject');
+		$name     = $helper->ask($input, $output, $question);
+
 		$question = new Question("<question>Define the sources directory</question> [src]\n", 'src');
 		$src      = $helper->ask($input, $output, $question);
 		$src      = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-		$question      = new Question("<question>Define the components directory</question> [${src}components]\n", $src . 'components');
+		$question      = new Question("<question>Define the components directory (relative to the sources directory)</question> [components]\n", 'components');
 		$srcComponents = $helper->ask($input, $output, $question);
 		$srcComponents = rtrim($srcComponents, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-		$question     = new Question("<question>Define the libraries directory</question> [${src}libraries]\n", $src . 'libraries');
+		$question     = new Question("<question>Define the libraries directory (relative to the sources directory)</question> [libraries]\n", 'libraries');
 		$srcLibraries = $helper->ask($input, $output, $question);
 		$srcLibraries = rtrim($srcLibraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
@@ -86,8 +90,8 @@ class Init extends Command
 		$output->writeln("<info>Create directories</info>");
 
 		mkdir($path . $src);
-		mkdir($path . $srcComponents);
-		mkdir($path . $srcLibraries);
+		mkdir($path . $src . $srcComponents);
+		mkdir($path . $src . $srcLibraries);
 
 		if (is_dir($path . $srcDemo))
 		{
@@ -106,6 +110,7 @@ class Init extends Command
 		}
 
 		$jbuilder = (object) [
+			'name'  => $name,
 			'paths' => [
 				'src'        => $src,
 				'components' => $srcComponents,
@@ -115,5 +120,38 @@ class Init extends Command
 		];
 
 		file_put_contents($path . '.jbuilder', json_encode($jbuilder));
+
+		$this->initConfig()->createPackageXml();
+	}
+
+	public function createPackageXml()
+	{
+		$xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><extension></extension>');
+
+		$xml->addAttribute('type', 'package');
+		$xml->addAttribute('version', '3.3.6');
+		$xml->addAttribute('method', 'upgrade');
+
+		$xml->addChild('name', $this->config->name);
+		$xml->addChild('creationDate', date('Y-m-d'));
+		$xml->addChild('packagename', $this->config->name);
+		$xml->addChild('version', '0.0.1');
+
+		$files = $xml->addChild('files');
+
+		$fof = $files->addChild('folder', $this->config->paths->libraries . 'fof');
+
+		$fof->addAttribute('type', 'library');
+		$fof->addAttribute('id', 'fof30');
+
+		$xml = $xml->asXML();
+
+		$domDocument = new \DOMDocument('1.0');
+		$domDocument->loadXML($xml);
+		$domDocument->preserveWhiteSpace = false;
+		$domDocument->formatOutput = true;
+		$xml = $domDocument->saveXML();
+
+		file_put_contents($this->basePath . $this->config->paths->src . 'pkg_' . $this->config->name . '.xml', $xml);
 	}
 }

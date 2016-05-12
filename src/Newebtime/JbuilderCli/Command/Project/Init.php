@@ -14,6 +14,7 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
+use Newebtime\JbuilderCli\Exception\OutputException;
 
 class Init extends BaseCommand
 {
@@ -33,95 +34,124 @@ class Init extends BaseCommand
 	}
 
 	/**
+	 * @inheritdoc
+	 */
+	protected function initialize(InputInterface $input, OutputInterface $output)
+	{
+		$this->initIO($input, $output);
+
+		$this->io->title('Init project');
+	}
+
+	/**
 	 * @@inheritdoc
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$path = $input->getArgument('path');
-
-		if (!$path)
+		try
 		{
-			$path = getcwd();
+			$path = $input->getArgument('path');
+
+			if (!$path)
+			{
+				$path = getcwd();
+			}
+
+			$path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+			if (!is_dir($path))
+			{
+				throw new OutputException([
+					'This directory does not exists, please check',
+					$path
+				], 'error');
+			}
+
+			if (file_exists($path . '.jbuilder'))
+			{
+				throw new OutputException([
+					'This directory has already been init',
+					$path
+				], 'error');
+			}
+
+			$output->writeln("\n<info>Init a project inside</info>\n$path\n");
+
+			$helper = $this->getHelper('question');
+
+			$question = new Question("<question>What is the package name?</question> [myproject]\n", 'myproject');
+			$name     = $helper->ask($input, $output, $question);
+
+			$question = new Question("<question>Define the sources directory</question> [src]\n", 'src');
+			$src      = $helper->ask($input, $output, $question);
+			$src      = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+			$question      = new Question("<question>Define the components directory (relative to the sources directory)</question> [components]\n", 'components');
+			$srcComponents = $helper->ask($input, $output, $question);
+			$srcComponents = rtrim($srcComponents, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+			$question     = new Question("<question>Define the libraries directory (relative to the sources directory)</question> [libraries]\n", 'libraries');
+			$srcLibraries = $helper->ask($input, $output, $question);
+			$srcLibraries = rtrim($srcLibraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+			$question = new Question("<question>Define the Joomla website directory</question> [demo]\n", 'demo');
+			$srcDemo  = $helper->ask($input, $output, $question);
+			$srcDemo  = rtrim($srcDemo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+			$question = new ConfirmationQuestion("<question>Add the demo in .gitignore?</question> [y]\n");
+
+			$ignoreDemo = $helper->ask($input, $output, $question);
+
+			$output->writeln("<info>Create directories</info>");
+
+			mkdir($path . $src);
+			mkdir($path . $src . $srcComponents);
+			mkdir($path . $src . $srcLibraries);
+
+			if (is_dir($path . $srcDemo))
+			{
+				$output->writeln("<comment>Demo directory already exists, skip</comment> [$path . $srcDemo]");
+			}
+			else
+			{
+				mkdir($path . $srcDemo);
+			}
+
+			touch($path . 'README.md');
+
+			if ($ignoreDemo)
+			{
+				file_put_contents($path . '.gitignore', $srcDemo);
+			}
+
+			$jbuilder = (object) [
+				'name'  => $name,
+				'paths' => [
+					'src'        => $src,
+					'components' => $srcComponents,
+					'libraries'  => $srcLibraries,
+					'demo'       => $srcDemo
+				]
+			];
+
+			file_put_contents($path . '.jbuilder', json_encode($jbuilder, JSON_PRETTY_PRINT));
+
+			$this->initConfig()->createPackageXml();
 		}
-
-		$path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-		if (!is_dir($path))
+		catch (OutputException $e)
 		{
-			$output->writeln("\n<error>This directory does not exists, please check</error>\n<comment>$path</comment>\n");
+			$type = $e->getType();
 
-			return;
+			$this->io->$type($e->getMessages());
+
+			exit;
 		}
-
-		if (file_exists($path . '.jbuilder'))
+		catch (\Exception $e)
 		{
-			$output->writeln("\n<error>This directory has already been init</error>\n<comment>$path</comment>\n");
+			$this->io->error($e->getMessage());
 
-			return;
+			exit;
 		}
-
-		$output->writeln("\n<info>Init a project inside</info>\n$path\n");
-
-		$helper = $this->getHelper('question');
-
-		$question = new Question("<question>What is the package name?</question> [myproject]\n", 'myproject');
-		$name     = $helper->ask($input, $output, $question);
-
-		$question = new Question("<question>Define the sources directory</question> [src]\n", 'src');
-		$src      = $helper->ask($input, $output, $question);
-		$src      = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-		$question      = new Question("<question>Define the components directory (relative to the sources directory)</question> [components]\n", 'components');
-		$srcComponents = $helper->ask($input, $output, $question);
-		$srcComponents = rtrim($srcComponents, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-		$question     = new Question("<question>Define the libraries directory (relative to the sources directory)</question> [libraries]\n", 'libraries');
-		$srcLibraries = $helper->ask($input, $output, $question);
-		$srcLibraries = rtrim($srcLibraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-		$question = new Question("<question>Define the Joomla website directory</question> [demo]\n", 'demo');
-		$srcDemo  = $helper->ask($input, $output, $question);
-		$srcDemo  = rtrim($srcDemo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-		$question = new ConfirmationQuestion("<question>Add the demo in .gitignore?</question> [y]\n");
-
-		$ignoreDemo = $helper->ask($input, $output, $question);
-
-		$output->writeln("<info>Create directories</info>");
-
-		mkdir($path . $src);
-		mkdir($path . $src . $srcComponents);
-		mkdir($path . $src . $srcLibraries);
-
-		if (is_dir($path . $srcDemo))
-		{
-			$output->writeln("<comment>Demo directory already exists, skip</comment> [$path . $srcDemo]");
-		}
-		else
-		{
-			mkdir($path . $srcDemo);
-		}
-
-		touch($path . 'README.md');
-
-		if ($ignoreDemo)
-		{
-			file_put_contents($path . '.gitignore', $srcDemo);
-		}
-
-		$jbuilder = (object) [
-			'name'  => $name,
-			'paths' => [
-				'src'        => $src,
-				'components' => $srcComponents,
-				'libraries'  => $srcLibraries,
-				'demo'       => $srcDemo
-			]
-		];
-
-		file_put_contents($path . '.jbuilder', json_encode($jbuilder, JSON_PRETTY_PRINT));
-
-		$this->initConfig()->createPackageXml();
 	}
 
 	public function createPackageXml()

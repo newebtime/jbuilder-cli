@@ -45,28 +45,39 @@ class Install extends BaseCommand
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
+		$this->io->section('Joomla');
 		$this->installJoomla($input, $output);
-		$this->installFof($input, $output);
+		$this->io->success('Demo website installation completed');
 
+		$this->io->section('FOF');
+		$this->installFof($input, $output);
+		$this->io->success('FOF installation completed');
+
+		$this->io->section('Package');
 		$this->installPackage($input, $output);
+		$this->io->success('Package installation completed');
 	}
 
 	public function installJoomla(InputInterface $input, OutputInterface $output)
 	{
+		$this->io->note('Start downloading Joomla');
+
 		$arguments = [
 			'site:download',
 			'site'      => $this->config->paths->demo,
 			'--refresh' => true,
-			'--www'     => getcwd()
+			'--www'     => $this->basePath
 		];
 
 		$command = new SiteDownload();
 		$command->run(new ArrayInput($arguments), $output);
 
+		$this->io->note('Start Installing Joomla');
+
 		$arguments = [
 			'site:install',
 			'site'          => $this->config->paths->demo,
-			'--www'         => getcwd(),
+			'--www'         => $this->basePath,
 			'--sample-data' => 'default',
 			'--interactive' => true
 		];
@@ -78,11 +89,9 @@ class Install extends BaseCommand
 
 	public function installFof(InputInterface $input, OutputInterface $output)
 	{
-		$app = Bootstrapper::getApplication(getcwd() . '/' . $this->config->paths->demo);
+		$this->io->note('Start downloading FOF');
 
-		// Output buffer is used as a guard against Joomla including ._ files when searching for adapters
-		// See: http://kadin.sdf-us.org/weblog/technology/software/deleting-dot-underscore-files.html
-		ob_start();
+		$app = Bootstrapper::getApplication($this->basePath . '/' . $this->config->paths->demo);
 
 		$versions = new Versions();
 
@@ -99,6 +108,12 @@ class Install extends BaseCommand
 			return;
 		}
 
+		$this->io->note('Start installing FOF');
+
+		// Output buffer is used as a guard against Joomla including ._ files when searching for adapters
+		// See: http://kadin.sdf-us.org/weblog/technology/software/deleting-dot-underscore-files.html
+		ob_start();
+
 		$tmpPath = $app->get('tmp_path');
 		$pkgPath = $tmpPath . $name;
 
@@ -110,7 +125,7 @@ class Install extends BaseCommand
 		}
 
 		$resultPath = $result['dir'];
-		$destPath   = getcwd() . '/' . $this->config->paths->src . $this->config->paths->libraries . 'fof30';
+		$destPath   = $this->basePath . '/' . $this->config->paths->src . $this->config->paths->libraries . 'fof30';
 
 		if (!\JFolder::copy($resultPath, $destPath))
 		{
@@ -125,12 +140,12 @@ class Install extends BaseCommand
 		}
 
 		$linkPath   = $destPath . '/fof';
-		$linkTarget = getcwd() . '/' . $this->config->paths->demo . 'libraries/fof30';
+		$linkTarget = $this->basePath . '/' . $this->config->paths->demo . 'libraries/fof30';
 
 		`ln -sf $linkPath $linkTarget`;
 
 		$linkXMLPath   = $destPath . '/fof/lib_fof30.xml';
-		$linkXMLTarget = getcwd() . '/' . $this->config->paths->demo . 'administrator/manifests/libraries/lib_fof30.xml';
+		$linkXMLTarget = $this->basePath . '/' . $this->config->paths->demo . 'administrator/manifests/libraries/lib_fof30.xml';
 
 		`ln -sf $linkXMLPath $linkXMLTarget`;
 
@@ -138,7 +153,7 @@ class Install extends BaseCommand
 			'extension:install',
 			'site'      => $this->config->paths->demo,
 			'extension' => 'lib_fof30',
-			'--www'     => getcwd()
+			'--www'     => $this->basePath
 		));
 
 		$command = new ExtensionInstall();
@@ -149,6 +164,6 @@ class Install extends BaseCommand
 
 	public function installPackage(InputInterface $input, OutputInterface $output)
 	{
-		//
+		//TODO: ln the pkg_ then install all the other libraries and components if any
 	}
 }

@@ -72,13 +72,13 @@ class Add extends BaseCommand
 		{
 			$this->io->warning('Action canceled, a component using the same name already exists');
 
-			return;
+			exit;
 		}
 		elseif (is_dir($path))
 		{
 			$this->io->warning('Action canceled, a directory for this component already exists');
 
-			return;
+			exit;
 		}
 
 		$this->io->comment([
@@ -165,8 +165,7 @@ class Add extends BaseCommand
 			mkdir($this->component->path . $path);
 		}
 
-		$this->buildBackend();
-		$this->buildFrontend();
+		$this->buildFiles();
 
 		//TODO: component.xml with only the current generated xml and php files
 		touch($this->component->path . $this->component->name . '.xml');
@@ -178,27 +177,137 @@ class Add extends BaseCommand
 
 		$this->io->success('New component added');
 
-		if (!$this->io->confirm('Install the component on the demo?'))
+		if ($input->isInteractive()
+			&& $this->io->confirm('Install the component on the demo?'))
 		{
 			//TODO: Symlink and add the component to the demo
 		}
 	}
 
-	public function buildBackend()
+	public function buildFiles()
 	{
-		//TODO: fof.xml with factoryClass to MagicFactory
-		touch($this->component->path . $this->component->paths['backend'] . 'fof.xml');
-		//TODO: access.xml with basic component section
-		touch($this->component->path . $this->component->paths['backend'] . 'access.xml');
-		//TODO: config.xml with permissions fieldset
-		touch($this->component->path . $this->component->paths['backend'] . 'config.xml');
-		//TODO: <?php + include fof30 + check constante + call the container and dispath
-		touch($this->component->path . $this->component->paths['backend'] . $this->component->name . '.php');
-	}
+		$xmls = [];
 
-	public function buildFrontend()
-	{
-		//TODO: <?php + include fof30 + check constante + call the container and dispath
-		touch($this->component->path . $this->component->paths['frontend'] . $this->component->name . '.php');
+		// fof.xml
+		$xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><fof></fof>');
+
+		$option = $xml
+			->addChild('common')
+				->addChild('container')
+					->addChild('option', 'FOF30\Factory\MagicFactory');
+
+		$option->addAttribute('name', 'factoryClass');
+
+		$xmls[] = (object) [
+			'xml'  => $xml,
+			'file' => $this->component->path . $this->component->paths['backend'] . 'fof.xml'
+		];
+
+		// access.xml
+		$xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><access></access>');
+		$xml->addAttribute('component', $this->component->comName);
+
+		$section = $xml
+			->addChild('section');
+		$section->addAttribute('name', 'component');
+
+		$actions = [
+			[
+				'name'        => 'core.admin',
+				'title'       => 'JACTION_ADMIN',
+				'description' => 'JACTION_ADMIN_COMPONENT_DESC'
+			],
+			[
+				'name'        => 'core.manage',
+				'title'       => 'JACTION_MANAGE',
+				'description' => 'JACTION_MANAGE_COMPONENT_DESC'
+			],
+			[
+				'name'        => 'core.create',
+				'title'       => 'JACTION_CREATE',
+				'description' => 'JACTION_CREATE_COMPONENT_DESC'
+			],
+			[
+				'name'        => 'core.delete',
+				'title'       => 'JACTION_DELETE',
+				'description' => 'JACTION_DELETE_COMPONENT_DESC'
+			],
+			[
+				'name'        => 'core.edit',
+				'title'       => 'JACTION_EDIT',
+				'description' => 'JACTION_EDIT_COMPONENT_DESC'
+			],
+			[
+				'name'        => 'core.edit.state',
+				'title'       => 'JACTION_EDITSTATE',
+				'description' => 'JACTION_EDITSTATE_COMPONENT_DESC'
+			]
+		];
+
+		foreach ($actions as $action)
+		{
+			$actionXml = $section->addChild('action');
+
+			$actionXml->addAttribute('name',        $action['name']);
+			$actionXml->addAttribute('title',       $action['title']);
+			$actionXml->addAttribute('description', $action['description']);
+		}
+
+		$xmls[] = (object) [
+			'xml'  => $xml,
+			'file' => $this->component->path . $this->component->paths['backend'] . 'access.xml'
+		];
+
+		// config.xml
+		$xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<fieldset
+		name="permissions"
+		label="JCONFIG_PERMISSIONS_LABEL"
+		description="JCONFIG_PERMISSIONS_DESC"
+	>
+		<field
+			name="rules"
+			type="rules"
+			label="JCONFIG_PERMISSIONS_LABEL"
+			class="inputbox"
+			filter="rules"
+			component="'. $this->component->comName . '"
+			section="component" />
+	</fieldset>
+</config>');
+
+		$xmls[] = (object) [
+			'xml'  => $xml,
+			'file' => $this->component->path . $this->component->paths['backend'] . 'config.xml'
+		];
+
+		foreach ($xmls as $xml)
+		{
+			$file = $xml->file;
+			$xml  = $xml->xml->asXML();
+
+			$domDocument = new \DOMDocument('1.0');
+			$domDocument->loadXML($xml);
+			$domDocument->preserveWhiteSpace = false;
+			$domDocument->formatOutput = true;
+			$xml = $domDocument->saveXML();
+
+			file_put_contents($file, $xml);
+		}
+
+		$php = '<?php' . PHP_EOL;
+		$php .= PHP_EOL;
+		$php .= 'defined(\'_JEXEC\') or die();' . PHP_EOL;
+		$php .= PHP_EOL;
+		$php .= 'if (!defined(\'FOF30_INCLUDED\') && !@include_once(JPATH_LIBRARIES . \'/fof30/include.php\'))' . PHP_EOL;
+		$php .=  '{'. PHP_EOL;
+		$php .= '	throw new RuntimeException(\'FOF 3.0 is not installed\', 500);' . PHP_EOL;
+		$php .=  '}'. PHP_EOL;
+		$php .= PHP_EOL;
+		$php .=  'FOF30\Container\Container::getInstance(\'' . $this->component->comName . '\')->dispatcher->dispatch();'. PHP_EOL;
+
+		file_put_contents($this->component->path . $this->component->paths['backend'] . $this->component->name . '.php', $php);
+		file_put_contents($this->component->path . $this->component->paths['frontend'] . $this->component->name . '.php', $php);
 	}
 }

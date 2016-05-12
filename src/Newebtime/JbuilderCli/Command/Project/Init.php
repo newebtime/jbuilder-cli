@@ -10,14 +10,14 @@ namespace Newebtime\JbuilderCli\Command\Project;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\Question;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
 use Newebtime\JbuilderCli\Exception\OutputException;
 
 class Init extends BaseCommand
 {
+	protected $ignoreDemo;
+
 	/**
 	 * @@inheritdoc
 	 */
@@ -38,23 +38,17 @@ class Init extends BaseCommand
 	 */
 	protected function initialize(InputInterface $input, OutputInterface $output)
 	{
-		$this->initIO($input, $output);
-
-		$this->io->title('Init project');
-	}
-
-	/**
-	 * @@inheritdoc
-	 */
-	protected function execute(InputInterface $input, OutputInterface $output)
-	{
 		try
 		{
+			$this->initIO($input, $output);
+
+			$this->io->title('Init project');
+
 			$path = $input->getArgument('path');
 
 			if (!$path)
 			{
-				$path = getcwd();
+				$path = $this->basePath;
 			}
 
 			$path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
@@ -72,71 +66,153 @@ class Init extends BaseCommand
 				throw new OutputException([
 					'This directory has already been init',
 					$path
+				], 'warning');
+			}
+
+			$this->basePath = $path;
+		}
+		catch (OutputException $e)
+		{
+			$type = $e->getType();
+
+			$this->io->$type($e->getMessages());
+
+			exit;
+		}
+		catch (\Exception $e)
+		{
+			$this->io->error($e->getMessage());
+
+			exit;
+		}
+	}
+
+	/**
+	 * @@inheritdoc
+	 */
+	protected function interact(InputInterface $input, OutputInterface $output)
+	{
+		$this->io->section('Project configuration');
+
+		$name = $this->io->ask('What is the package name?', 'myproject');
+
+		$src = $this->io->ask('Define the sources directory', 'src');
+		$src = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+		$srcComponents = $this->io->ask('Define the components directory (relative to the sources directory)', 'components');
+		$srcComponents = rtrim($srcComponents, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+		$srcLibraries = $this->io->ask('Define the libraries directory (relative to the sources directory)', 'libraries');
+		$srcLibraries = rtrim($srcLibraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+		$srcDemo = $this->io->ask('Define the Joomla website directory', 'demo');
+		$srcDemo = rtrim($srcDemo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+		$this->ignoreDemo = $this->io->confirm('Add the demo in .gitignore?');
+
+		$this->io->comment([
+			'Sources    ' . $src,
+			'Components ' . $src . $srcComponents,
+			'Libraries  ' . $src . $srcLibraries,
+			'Demo       ' . $srcDemo
+		]);
+
+		$this->config = (object) [
+			'name'  => $name,
+			'paths' => [
+				'src'        => $src,
+				'components' => $srcComponents,
+				'libraries'  => $srcLibraries,
+				'demo'       => $srcDemo
+			]
+		];
+	}
+
+	/**
+	 * @@inheritdoc
+	 */
+	protected function execute(InputInterface $input, OutputInterface $output)
+	{
+		try
+		{
+			$this->io->section('Project creation');
+
+			$path = $this->basePath;
+
+			//TODO: Create a mkdir method or use symfony filesystem or both~
+			if (is_dir($path . $this->config->paths->src))
+			{
+				$this->io->note([
+					'Skip directory creation, this directory already exists',
+					$path . $this->config->paths->src
+				]);
+			}
+			elseif (!@mkdir($path . $this->config->paths->src))
+			{
+				throw new OutputException([
+					'Something wrong happened during the creation po the directory',
+					$path . $this->config->paths->src
 				], 'error');
 			}
 
-			$output->writeln("\n<info>Init a project inside</info>\n$path\n");
-
-			$helper = $this->getHelper('question');
-
-			$question = new Question("<question>What is the package name?</question> [myproject]\n", 'myproject');
-			$name     = $helper->ask($input, $output, $question);
-
-			$question = new Question("<question>Define the sources directory</question> [src]\n", 'src');
-			$src      = $helper->ask($input, $output, $question);
-			$src      = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-			$question      = new Question("<question>Define the components directory (relative to the sources directory)</question> [components]\n", 'components');
-			$srcComponents = $helper->ask($input, $output, $question);
-			$srcComponents = rtrim($srcComponents, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-			$question     = new Question("<question>Define the libraries directory (relative to the sources directory)</question> [libraries]\n", 'libraries');
-			$srcLibraries = $helper->ask($input, $output, $question);
-			$srcLibraries = rtrim($srcLibraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-			$question = new Question("<question>Define the Joomla website directory</question> [demo]\n", 'demo');
-			$srcDemo  = $helper->ask($input, $output, $question);
-			$srcDemo  = rtrim($srcDemo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-
-			$question = new ConfirmationQuestion("<question>Add the demo in .gitignore?</question> [y]\n");
-
-			$ignoreDemo = $helper->ask($input, $output, $question);
-
-			$output->writeln("<info>Create directories</info>");
-
-			mkdir($path . $src);
-			mkdir($path . $src . $srcComponents);
-			mkdir($path . $src . $srcLibraries);
-
-			if (is_dir($path . $srcDemo))
+			if (is_dir($path . $this->config->paths->src . $this->config->paths->components))
 			{
-				$output->writeln("<comment>Demo directory already exists, skip</comment> [$path . $srcDemo]");
+				$this->io->note([
+					'Skip directory creation, this directory already exists',
+					$path . $this->config->paths->src . $this->config->paths->components
+				]);
 			}
-			else
+			elseif (!@mkdir($path . $this->config->paths->src . $this->config->paths->components))
 			{
-				mkdir($path . $srcDemo);
+				throw new OutputException([
+					'Something wrong happened during the creation po the directory',
+					$path . $this->config->paths->src . $this->config->paths->components
+				], 'error');
 			}
 
+			if (is_dir($path . $this->config->paths->src . $this->config->paths->libraries))
+			{
+				$this->io->note([
+					'Skip directory creation, this directory already exists',
+					$path . $this->config->paths->src . $this->config->paths->libraries
+				]);
+			}
+			elseif (!@mkdir($path . $this->config->paths->src . $this->config->paths->libraries))
+			{
+				throw new OutputException([
+					'Something wrong happened during the creation po the directory',
+					$path . $this->config->paths->src . $this->config->paths->libraries
+				], 'error');
+			}
+
+			if (is_dir($path . $this->config->paths->demo))
+			{
+				$this->io->note([
+					'Skip demo, the directory already exists',
+					$path . $this->config->paths->demo
+				]);
+			}
+			elseif (!@mkdir($path . $this->config->paths->demo))
+			{
+				throw new OutputException([
+					'Something wrong happened during the creation po the directory',
+					$path . $this->config->paths->demo
+				], 'error');
+			}
+
+			//TODO: Check
 			touch($path . 'README.md');
 
-			if ($ignoreDemo)
+			if ($this->ignoreDemo)
 			{
-				file_put_contents($path . '.gitignore', $srcDemo);
+				//TODO: Check
+				file_put_contents($path . '.gitignore', $this->config->paths->demo);
 			}
 
-			$jbuilder = (object) [
-				'name'  => $name,
-				'paths' => [
-					'src'        => $src,
-					'components' => $srcComponents,
-					'libraries'  => $srcLibraries,
-					'demo'       => $srcDemo
-				]
-			];
+			//TODO: Check
+			file_put_contents($path . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT));
 
-			file_put_contents($path . '.jbuilder', json_encode($jbuilder, JSON_PRETTY_PRINT));
-
-			$this->initConfig()->createPackageXml();
+			$this->createPackageXml();
 		}
 		catch (OutputException $e)
 		{
@@ -167,9 +243,9 @@ class Init extends BaseCommand
 		$xml->addChild('packagename', $this->config->name);
 		$xml->addChild('version', '0.0.1');
 
-		$files = $xml->addChild('files');
-
-		$fof = $files->addChild('folder', $this->config->paths->libraries . 'fof');
+		$fof = $xml
+			->addChild('files')
+				->addChild('folder', $this->config->paths->libraries . 'fof');
 
 		$fof->addAttribute('type', 'library');
 		$fof->addAttribute('id', 'fof30');
@@ -182,6 +258,7 @@ class Init extends BaseCommand
 		$domDocument->formatOutput = true;
 		$xml = $domDocument->saveXML();
 
+		//TODO: Check
 		file_put_contents($this->basePath . $this->config->paths->src . 'pkg_' . $this->config->name . '.xml', $xml);
 	}
 }

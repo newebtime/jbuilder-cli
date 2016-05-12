@@ -30,6 +30,15 @@ class Install extends BaseCommand
 			->setName('project:install')
 			->setDescription('Download and install the dependency for the project (Joomla, FOF, package)');
 	}
+	/**
+	 * @inheritdoc
+	 */
+	protected function initialize(InputInterface $input, OutputInterface $output)
+	{
+		$this->initIO($input, $output);
+
+		$this->io->title('Install project');
+	}
 
 	/**
 	 * @@inheritdoc
@@ -85,7 +94,7 @@ class Install extends BaseCommand
 
 		if (!$name = \JInstallerHelper::downloadPackage($package))
 		{
-			//TODO: Error message
+			$this->io->warning('Action cancel, impossible to download FOF package');
 
 			return;
 		}
@@ -95,7 +104,7 @@ class Install extends BaseCommand
 
 		if (!$result = \JInstallerHelper::unpack($pkgPath))
 		{
-			//TODO: Error message
+			$this->io->warning('Action cancel, impossible to unpack FOF package');
 
 			return;
 		}
@@ -105,14 +114,14 @@ class Install extends BaseCommand
 
 		if (!\JFolder::copy($resultPath, $destPath))
 		{
-			//TODO: Error message
+			$this->io->warning('Action cancel, impossible to copy FOF to the library directory');
 
 			return;
 		}
 
 		if (!\JInstallerHelper::cleanupInstall($pkgPath, $resultPath))
 		{
-			//TODO: Warning message
+			$this->io->note('Joomla temp directory could not be cleaned');
 		}
 
 		$linkPath   = $destPath . '/fof';

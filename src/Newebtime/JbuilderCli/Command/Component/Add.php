@@ -92,10 +92,10 @@ class Add extends BaseCommand
 			'name'    => $name,
 			'path'    => $path,
 			'paths'   => [
-				'backend'   => 'admin/',
-				'frontend'  => 'site/',
-				'media'     => 'media/',
-				'languages' => 'languages/'
+				'backend'  => 'admin/',
+				'frontend' => 'site/',
+				'media'    => 'media/',
+				'language' => 'language/'
 			]
 		];
 	}
@@ -105,8 +105,6 @@ class Add extends BaseCommand
 	 */
 	protected function interact(InputInterface $input, OutputInterface $output)
 	{
-		$this->initIO($input, $output);
-
 		if (!$this->io->confirm('Use the default structure?'))
 		{
 			$backend  = $this->io->ask('Define the backend directory', $this->component->paths['backend']);
@@ -118,19 +116,25 @@ class Add extends BaseCommand
 			$media    = $this->io->ask('Define the media directory', $this->component->paths['media']);
 			$media    = rtrim($media, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-			$languages = $this->io->ask('Define the languages directory', $this->component->paths['languages']);
-			$languages = rtrim($languages, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+			$language = $this->io->ask('Define the language directory', $this->component->paths['language']);
+			$language = rtrim($language, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
 			$paths = [
-				'backend'   => $backend,
-				'frontend'  => $frontend,
-				'media'     => $media,
-				'languages' => $languages
+				'backend'  => $backend,
+				'frontend' => $frontend,
+				'media'    => $media,
+				'language' => $language
 			];
 
 			//TODO: Check paths
 
 			$this->component->paths = $paths;
+		}
+
+		//TODO well we need first to ask the default one in the project?
+		if (!$this->io->confirm('Use the default informations (author, copyright, etc)?'))
+		{
+
 		}
 	}
 
@@ -139,15 +143,13 @@ class Add extends BaseCommand
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$this->initIO($input, $output);
-
 		$this->io->note('The builder is working, please wait');
 
 		$this->io->listing([
+			'Update project file',
 			'Generate component directories',
 			'Generate component files',
-			'Update package XML file',
-			'Update project file'
+			'Update package XML file'
 		]);
 
 		if (!mkdir($this->component->path))
@@ -165,15 +167,13 @@ class Add extends BaseCommand
 			mkdir($this->component->path . $path);
 		}
 
+		$this->updateProject();
+
 		$this->buildFiles();
 
-		//TODO: component.xml with only the current generated xml and php files
-		touch($this->component->path . $this->component->name . '.xml');
+		$this->generateXml();
 
-		$srcBase = $this->basePath . $this->config->paths->src;
-
-		//TODO: Update package XML file (pkg_name)
-		//TODO: Update project file
+		$this->updatePackageXml();
 
 		$this->io->success('New component added');
 
@@ -182,6 +182,21 @@ class Add extends BaseCommand
 		{
 			//TODO: Symlink and add the component to the demo
 		}
+	}
+
+	public function updateProject()
+	{
+		$config = clone $this->component;
+		unset($config->path);
+
+		if (!isset($this->config->components))
+		{
+			$this->config->components = (object) [];
+		}
+
+		$this->config->components->{$this->component->comName} = $config;
+
+		file_put_contents($this->basePath . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT));
 	}
 
 	public function buildFiles()
@@ -309,5 +324,48 @@ class Add extends BaseCommand
 
 		file_put_contents($this->component->path . $this->component->paths['backend'] . $this->component->name . '.php', $php);
 		file_put_contents($this->component->path . $this->component->paths['frontend'] . $this->component->name . '.php', $php);
+	}
+
+	public function generateXml()
+	{
+		/**
+		 * TODO: component.xml with only the current generated xml and php files
+		 *      Should we detect the folder and files?
+		 *
+		 *      name
+		 *      creationData
+		 *      license
+		 *      version
+		 *
+		 *      files
+		 *
+		 *      languages : If not empty
+		 *
+		 *      install & update : If exists
+		 *
+		 *      media : If not empty
+		 *
+		 *      administration
+		 *          menu
+		 *
+		 *          files
+		 *
+		 *          languages : If not empty
+		 *
+		 *      updateservers? If already configurated (we need to customise the config a bit more)
+		 */
+		touch($this->component->path . $this->component->name . '.xml');
+	}
+
+	public function updatePackageXml()
+	{
+		$srcBase = $this->basePath . $this->config->paths->src;
+		/**
+		 * TODO: Update package XML file (pkg_name)
+		 *      We should detect the folder
+		 *
+		 *      components/
+		 *      libraries/
+		 */
 	}
 }

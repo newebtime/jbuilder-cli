@@ -11,6 +11,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use Joomlatools\Console\Joomla\Bootstrapper;
+
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
 
 class Add extends BaseCommand
@@ -39,6 +41,9 @@ class Add extends BaseCommand
 	protected function initialize(InputInterface $input, OutputInterface $output)
 	{
 		$this->initIO($input, $output);
+
+		Bootstrapper::getApplication($this->basePath . $this->config->paths->demo);
+		\JLoader::register('JFolder',  JPATH_PLATFORM . '/joomla/filesystem/folder.php');
 
 		$this->io->title('Add component');
 
@@ -297,6 +302,7 @@ class Add extends BaseCommand
 			'file' => $this->component->path . $this->component->paths['backend'] . 'config.xml'
 		];
 
+		//TODO: Create a method
 		foreach ($xmls as $xml)
 		{
 			$file = $xml->file;
@@ -324,37 +330,144 @@ class Add extends BaseCommand
 
 		file_put_contents($this->component->path . $this->component->paths['backend'] . $this->component->name . '.php', $php);
 		file_put_contents($this->component->path . $this->component->paths['frontend'] . $this->component->name . '.php', $php);
+
+		//TODO: Create the default language files
 	}
 
 	public function generateXml()
 	{
-		/**
-		 * TODO: component.xml with only the current generated xml and php files
-		 *      Should we detect the folder and files?
-		 *
-		 *      name
-		 *      creationData
-		 *      license
-		 *      version
-		 *
-		 *      files
-		 *
-		 *      languages : If not empty
-		 *
-		 *      install & update : If exists
-		 *
-		 *      media : If not empty
-		 *
-		 *      administration
-		 *          menu
-		 *
-		 *          files
-		 *
-		 *          languages : If not empty
-		 *
-		 *      updateservers? If already configurated (we need to customise the config a bit more)
-		 */
-		touch($this->component->path . $this->component->name . '.xml');
+		$app = Bootstrapper::getApplication($this->basePath . '/' . $this->config->paths->demo);
+
+		$path = $this->component->path;
+
+		$xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><extension></extension>');
+
+		$xml->addAttribute('version', '3.3');
+		$xml->addAttribute('type', 'component');
+		$xml->addAttribute('method', 'upgrade');
+
+		$xml->addChild('name', $this->component->comName);
+		$xml->addChild('creationDate', date('Y-m-d'));
+		$xml->addChild('author', 'author'); //TODO
+		$xml->addChild('authorEmail', 'author@domain.tld'); //TODO
+		$xml->addChild('authorUrl', 'http://www.domain.tld'); //TODO
+		$xml->addChild('copyright', 'Copyright (c) 2016 MySelf'); //TODO
+		$xml->addChild('license', 'GNU General Public License version 2 or later'); //TODO
+		$xml->addChild('version', '0.0.1'); //TODO
+		$xml->addChild('description', strtoupper($this->component->comName) . '_XML_DESCRIPTION');
+
+		if (file_exists($path . 'script.' . $this->component->comName . '.php'))
+		{
+			$xml->addChild('scriptfile', 'script.' . $this->component->comName . '.php');
+		}
+		elseif (file_exists($path . 'script.' . $this->component->name . '.php'))
+		{
+			$xml->addChild('scriptfile', 'script.' . $this->component->name . '.php');
+		}
+
+		$files = $xml->addChild('files');
+		$files->addAttribute('folder', $this->component->paths['frontend']);
+
+		if ($filesFiles = \JFolder::folders($path . $this->component->paths['frontend']))
+		{
+			foreach ($filesFiles as $file)
+			{
+				$files->addChild('folder', $file);
+			}
+		}
+		if ($filesFiles = \JFolder::files($path . $this->component->paths['frontend']))
+		{
+			foreach ($filesFiles as $file)
+			{
+				$files->addChild('file', $file);
+			}
+		}
+
+		if ($langsFiles = \JFolder::folders($path . $this->component->paths['language'] . 'backend'))
+		{
+			$langs = $xml->addChild('languages');
+			$langs->addAttribute('folder', $this->component->paths['language'] . 'frontend');
+
+			foreach ($langsFiles as $file)
+			{
+				//TODO: Better parse folder to find .ini file
+				$langs
+					->addChild('language', $this->component->paths['language'] . 'frontend' . $file . '/' . $file . '.' . $this->component->comName . '.ini')
+					->addAttribute('tag', $file);
+			}
+		}
+
+		//TODO: install & update : If exists / We need to setup the folder default: sql
+		//$xml->addChild('install');
+		//$xml->addChild('update');
+
+		$media = $xml->addChild('media');
+		$media->addAttribute('destination', $this->component->comName);
+
+		if ($mediaFiles = \JFolder::folders($path . $this->component->paths['media']))
+		{
+			foreach ($mediaFiles as $file)
+			{
+				$media->addChild('folder', $file);
+			}
+		}
+		if ($mediaFiles = \JFolder::files($path . $this->component->paths['media']))
+		{
+			foreach ($mediaFiles as $file)
+			{
+				$media->addChild('file', $file);
+			}
+		}
+
+		$admin = $xml->addChild('administration');
+
+		$adminMenu = $admin->addChild('menu', $this->component->comName);
+		$adminMenu->addAttribute('link', 'option=' . $this->component->comName);
+
+		$adminFiles = $admin->addChild('files');
+		$adminFiles->addAttribute('folder', $this->component->paths['backend']);
+
+		if ($adminFilesFiles = \JFolder::folders($path . $this->component->paths['backend']))
+		{
+			foreach ($adminFilesFiles as $file)
+			{
+				$adminFiles->addChild('folder', $file);
+			}
+		}
+		if ($adminFilesFiles = \JFolder::files($path . $this->component->paths['backend']))
+		{
+			foreach ($adminFilesFiles as $file)
+			{
+				$adminFiles->addChild('file', $file);
+			}
+		}
+
+
+		if ($adminLangsFiles = \JFolder::folders($path . $this->component->paths['language'] . 'backend'))
+		{
+			$adminLangs = $admin->addChild('languages');
+			$adminLangs->addAttribute('folder', $this->component->paths['language'] . 'backend');
+
+			foreach ($adminLangsFiles as $file)
+			{
+				//TODO: Better parse folder to find .ini file
+				$adminLangs
+					->addChild('language', $file . '.' . $this->component->comName . '.ini')
+					->addAttribute('tag', $file);
+			}
+		}
+
+		//TODO: updateservers
+
+		$xml  = $xml->asXML();
+
+		$domDocument = new \DOMDocument('1.0');
+		$domDocument->loadXML($xml);
+		$domDocument->preserveWhiteSpace = false;
+		$domDocument->formatOutput = true;
+		$xml = $domDocument->saveXML();
+
+		file_put_contents($this->component->path . $this->component->name . '.xml', $xml);
 	}
 
 	public function updatePackageXml()

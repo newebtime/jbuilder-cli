@@ -7,11 +7,13 @@
 
 namespace Newebtime\JbuilderCli\Command\Component;
 
+use Joomlatools\Console\Command\Extension\Install as ExtensionInstall;
+use Joomlatools\Console\Joomla\Bootstrapper;
+
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-
-use Joomlatools\Console\Joomla\Bootstrapper;
 
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
 
@@ -185,7 +187,41 @@ class Add extends BaseCommand
 		if ($input->isInteractive()
 			&& $this->io->confirm('Install the component on the demo?'))
 		{
-			//TODO: Symlink and add the component to the demo
+			$fromPath   = $this->component->path . $this->component->paths['backend'];
+			$targetPath = $this->basePath . $this->config->paths->demo . 'administrator/components/' . $this->component->comName;
+
+			`ln -sf $fromPath $targetPath`;
+
+			$fromPath   = $this->component->path . $this->component->paths['frontend'];
+			$targetPath = $this->basePath . $this->config->paths->demo . 'components/' . $this->component->comName;
+
+			`ln -sf $fromPath $targetPath`;
+
+			$fromPath   = $this->component->path . $this->component->paths['media'];
+			$targetPath = $this->basePath . $this->config->paths->demo . 'media/' . $this->component->comName;
+
+			`ln -sf $fromPath $targetPath`;
+
+			//TODO: Generate languages
+			//$fromPath   = $this->component->path . $this->component->paths['language'];
+			//$targetPath = $this->basePath . $this->config->paths->demo . 'media/' . $this->component->comName;
+
+			//`ln -sf $fromPath $targetPath`;
+
+			$fromPath   = $this->component->path . $this->component->name . '.xml';
+			$targetPath = $this->basePath . $this->config->paths->demo . 'administrator/components/' . $this->component->comName . '/' . $this->component->name . '.xml';
+
+			`ln -sf $fromPath $targetPath`;
+
+			$arguments = new ArrayInput(array(
+				'extension:install',
+				'site'      => $this->config->paths->demo,
+				'extension' => $this->component->comName,
+				'--www'     => $this->basePath
+			));
+
+			$command = new ExtensionInstall();
+			$command->run($arguments, $output);
 		}
 	}
 
@@ -336,8 +372,6 @@ class Add extends BaseCommand
 
 	public function generateXml()
 	{
-		$app = Bootstrapper::getApplication($this->basePath . '/' . $this->config->paths->demo);
-
 		$path = $this->component->path;
 
 		$xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><extension></extension>');
@@ -441,7 +475,6 @@ class Add extends BaseCommand
 				$adminFiles->addChild('file', $file);
 			}
 		}
-
 
 		if ($adminLangsFiles = \JFolder::folders($path . $this->component->paths['language'] . 'backend'))
 		{

@@ -70,3 +70,4 @@ the base files (PHP and XML) and update the package XML.
 - Add message during the Install (e.g. "Downloading Joomla, etc")
 - Create the command to link to fofcli command (if possible)
 - Ask to add fof30 to .gitignore (it will be downloaded automaticaly on project:install)
+- Refactorize a bit, it become messy

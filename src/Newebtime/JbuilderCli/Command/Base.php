@@ -1,6 +1,6 @@
 <?php
 /**
- * @package    JBuilder
+ * @package    JBuilderCli
  * @copyright  Copyright (c) 2003-2016 Frédéric Vandebeuque / Newebtime
  * @license    Mozilla Public License, version 2.0
  */

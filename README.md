@@ -42,18 +42,19 @@ For now you cannot use an existing website, it is a todo for later :)
 
 `$ php jbuilder project:install`
 
-3. [WIP] Create a component inside the project.
+3. Create a component inside the project.
 
-You can create a component using:
+Now you have the minimum requirement installed, you will have to add at least one component
 
 `$ php jbuilder component:create com_todo`
 
 It will ask you some questions about the structure and informations. Then it will generate
 the base files (PHP and XML) and update the package XML.
 
-4. [TODO] Start building your component
+4. Start building your component
 
---
+Your first component is now init, [go to the wiki page](https://github.com/newebtime/jbuilder-cli/wiki)
+to have more documentation to start building it.
 
 # TODO
 
@@ -61,9 +62,9 @@ the base files (PHP and XML) and update the package XML.
 - Create a composer.json with the packagename as name
 - Do some check and validation (package name, paths)
 - Add message during the Install (e.g. "Downloading Joomla, etc")
-- Create the command to link to fofcli command (if possible)
 - Ask to add fof30 to .gitignore (it will be downloaded automaticaly on project:install)
 - Refactorize a bit, it become messy
+- Add help to each command
 
 # Requirements
 

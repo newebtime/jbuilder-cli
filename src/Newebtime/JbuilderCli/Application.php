@@ -55,6 +55,7 @@ class Application extends \Symfony\Component\Console\Application
 			new Command\Project\Init(),
 			new Command\Project\Install(),
 			new Command\Component\Add(),
+			new Command\Component\Entity(),
 		]);
 
 		return $commands;

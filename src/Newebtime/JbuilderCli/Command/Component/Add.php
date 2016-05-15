@@ -8,33 +8,23 @@
 namespace Newebtime\JbuilderCli\Command\Component;
 
 use Joomlatools\Console\Command\Extension\Install as ExtensionInstall;
-use Joomlatools\Console\Joomla\Bootstrapper;
 
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-use Newebtime\JbuilderCli\Command\Base as BaseCommand;
-
-class Add extends BaseCommand
+class Add extends AbstractComponent
 {
-	/** @var \stdClass */
-	protected $component;
-
 	/**
 	 * @@inheritdoc
 	 */
 	protected function configure()
 	{
+		parent::configure();
+
 		$this
 			->setName('component:add')
-			->setDescription('Add a new component is the sources')
-			->addArgument(
-				'name',
-				InputArgument::REQUIRED,
-				'The component name (e.g. com_todo)'
-			);
+			->setDescription('Add a new component is the sources');
 	}
 
 	/**
@@ -42,40 +32,20 @@ class Add extends BaseCommand
 	 */
 	protected function initialize(InputInterface $input, OutputInterface $output)
 	{
-		$this->initIO($input, $output);
+		parent::initialize($input, $output);
 
-		Bootstrapper::getApplication($this->basePath . $this->config->paths->demo);
 		\JLoader::register('JFolder',  JPATH_PLATFORM . '/joomla/filesystem/folder.php');
 
 		$this->io->title('Add component');
 
-		$comName = $input->getArgument('name');
-		$comName = strtolower($comName);
-
-		if ('com_' !== substr($comName, 0, 4))
-		{
-			$this->io->warning('Action canceled, the name need to start by com_ (e.g. com_todo)');
-
-			exit;
-		};
-
-		$name = substr($comName, 4);
-
-		if (preg_replace('/[^A-Z_]/i', '', $name) != $name)
-		{
-			$this->io->warning('Action canceled, the name is not correct, you can use only A-Z and _ (e.g. com_to_do)');
-
-			exit;
-		}
-
 		$path = $this->basePath
 			. $this->config->paths->src
 			. $this->config->paths->components
-			. $comName
+			. $this->component->comName
 			. DIRECTORY_SEPARATOR;
 
 		if (isset($this->config->components)
-			&& array_key_exists($name, $this->config->components))
+			&& array_key_exists($this->component->name, $this->config->components))
 		{
 			$this->io->warning('Action canceled, a component using the same name already exists');
 
@@ -89,22 +59,12 @@ class Add extends BaseCommand
 		}
 
 		$this->io->comment([
-			'ComName    ' . $comName,
-			'Name       ' . $name,
+			'ComName    ' . $this->component->comName,
+			'Name       ' . $this->component->name,
 			'Directory  ' . $path
 		]);
 
-		$this->component = (object) [
-			'comName' => $comName,
-			'name'    => $name,
-			'path'    => $path,
-			'paths'   => [
-				'backend'  => 'admin/',
-				'frontend' => 'site/',
-				'media'    => 'media/',
-				'language' => 'language/'
-			]
-		];
+		$this->component->path = $path;
 	}
 
 	/**

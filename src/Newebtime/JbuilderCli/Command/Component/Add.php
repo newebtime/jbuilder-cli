@@ -159,6 +159,7 @@ class Add extends BaseCommand
 			'Update package XML file'
 		]);
 
+		// TODO: Check
 		if (!mkdir($this->component->path))
 		{
 			$this->io->error([
@@ -171,6 +172,7 @@ class Add extends BaseCommand
 
 		foreach ($this->component->paths as $path)
 		{
+			// TODO: Check
 			mkdir($this->component->path . $path);
 		}
 
@@ -237,6 +239,7 @@ class Add extends BaseCommand
 
 		$this->config->components->{$this->component->comName} = $config;
 
+		//TODO: Check
 		file_put_contents($this->basePath . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT));
 	}
 
@@ -338,19 +341,12 @@ class Add extends BaseCommand
 			'file' => $this->component->path . $this->component->paths['backend'] . 'config.xml'
 		];
 
-		//TODO: Create a method
 		foreach ($xmls as $xml)
 		{
 			$file = $xml->file;
 			$xml  = $xml->xml->asXML();
 
-			$domDocument = new \DOMDocument('1.0');
-			$domDocument->loadXML($xml);
-			$domDocument->preserveWhiteSpace = false;
-			$domDocument->formatOutput = true;
-			$xml = $domDocument->saveXML();
-
-			file_put_contents($file, $xml);
+			$this->saveXML($xml, $file);
 		}
 
 		$php = '<?php' . PHP_EOL;
@@ -364,6 +360,7 @@ class Add extends BaseCommand
 		$php .= PHP_EOL;
 		$php .=  'FOF30\Container\Container::getInstance(\'' . $this->component->comName . '\')->dispatcher->dispatch();'. PHP_EOL;
 
+		// TODO: Check
 		file_put_contents($this->component->path . $this->component->paths['backend'] . $this->component->name . '.php', $php);
 		file_put_contents($this->component->path . $this->component->paths['frontend'] . $this->component->name . '.php', $php);
 
@@ -492,15 +489,7 @@ class Add extends BaseCommand
 
 		//TODO: updateservers
 
-		$xml  = $xml->asXML();
-
-		$domDocument = new \DOMDocument('1.0');
-		$domDocument->loadXML($xml);
-		$domDocument->preserveWhiteSpace = false;
-		$domDocument->formatOutput = true;
-		$xml = $domDocument->saveXML();
-
-		file_put_contents($this->component->path . $this->component->name . '.xml', $xml);
+		$this->saveXML($xml->asXML(), $this->component->path . $this->component->name . '.xml');
 	}
 
 	public function updatePackageXml()

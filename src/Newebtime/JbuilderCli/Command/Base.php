@@ -59,4 +59,33 @@ class Base extends Command
 			$this->io = new SymfonyStyle($input, $output);
 		}
 	}
+
+	/**
+	 * Save a XML using DOMDocument to format output
+	 *
+	 * @param string $xml       The XML to save
+	 * @param string $filePath  The path of the file
+	 *
+	 * @return bool
+	 */
+	protected function saveXML($xml, $filePath)
+	{
+		$domDocument = new \DOMDocument('1.0');
+		$domDocument->loadXML($xml);
+		$domDocument->preserveWhiteSpace = false;
+		$domDocument->formatOutput = true;
+		$xml = $domDocument->saveXML();
+
+		if (!@file_put_contents($filePath, $xml))
+		{
+			$this->io->warning([
+				'The XML file could not be created, please check',
+				$filePath
+			]);
+
+			return false;
+		}
+
+		return true;
+	}
 }

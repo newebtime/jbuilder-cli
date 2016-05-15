@@ -139,78 +139,55 @@ class Init extends BaseCommand
 
 			$path = $this->basePath;
 
-			//TODO: Create a mkdir method or use symfony filesystem or both~
-			if (is_dir($path . $this->config->paths->src))
+			$mkPaths = [
+				$path . $this->config->paths->src,
+				$path . $this->config->paths->src . $this->config->paths->components,
+				$path . $this->config->paths->src . $this->config->paths->libraries,
+				$path . $this->config->paths->demo
+			];
+
+			foreach ($mkPaths as $mkPath)
 			{
-				$this->io->note([
-					'Skip directory creation, this directory already exists',
-					$path . $this->config->paths->src
+				if (is_dir($mkPath))
+				{
+					$this->io->note([
+						'Skip directory creation, this directory already exists',
+						$mkPath
+					]);
+				}
+				elseif (!@mkdir($mkPath))
+				{
+					throw new OutputException([
+						'Something wrong happened during the creation po the directory',
+						$mkPath
+					], 'error');
+				}
+			}
+
+			if (!@touch($path . 'README.md'))
+			{
+				$this->io->warning([
+					'The README.md could not be created',
+					$path . 'README.md'
 				]);
 			}
-			elseif (!@mkdir($path . $this->config->paths->src))
-			{
-				throw new OutputException([
-					'Something wrong happened during the creation po the directory',
-					$path . $this->config->paths->src
-				], 'error');
-			}
 
-			if (is_dir($path . $this->config->paths->src . $this->config->paths->components))
+			if ($this->ignoreDemo
+				&& !@file_put_contents($path . '.gitignore', $this->config->paths->demo))
 			{
-				$this->io->note([
-					'Skip directory creation, this directory already exists',
-					$path . $this->config->paths->src . $this->config->paths->components
+				$this->io->warning([
+					'The .gitignore could not be created',
+					$path . 'README.md'
 				]);
 			}
-			elseif (!@mkdir($path . $this->config->paths->src . $this->config->paths->components))
+
+			if (!@file_put_contents($path . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT)))
 			{
 				throw new OutputException([
-					'Something wrong happened during the creation po the directory',
-					$path . $this->config->paths->src . $this->config->paths->components
+					'Action canceled, the builder file cannot be created, please check.',
+					$path . '.jbuilder'
 				], 'error');
 			}
-
-			if (is_dir($path . $this->config->paths->src . $this->config->paths->libraries))
-			{
-				$this->io->note([
-					'Skip directory creation, this directory already exists',
-					$path . $this->config->paths->src . $this->config->paths->libraries
-				]);
-			}
-			elseif (!@mkdir($path . $this->config->paths->src . $this->config->paths->libraries))
-			{
-				throw new OutputException([
-					'Something wrong happened during the creation po the directory',
-					$path . $this->config->paths->src . $this->config->paths->libraries
-				], 'error');
-			}
-
-			if (is_dir($path . $this->config->paths->demo))
-			{
-				$this->io->note([
-					'Skip demo, the directory already exists',
-					$path . $this->config->paths->demo
-				]);
-			}
-			elseif (!@mkdir($path . $this->config->paths->demo))
-			{
-				throw new OutputException([
-					'Something wrong happened during the creation po the directory',
-					$path . $this->config->paths->demo
-				], 'error');
-			}
-
-			//TODO: Check
-			touch($path . 'README.md');
-
-			if ($this->ignoreDemo)
-			{
-				//TODO: Check
-				file_put_contents($path . '.gitignore', $this->config->paths->demo);
-			}
-
-			//TODO: Check
-			file_put_contents($path . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT));
 
 			$this->createPackageXml();
 		}
@@ -250,15 +227,6 @@ class Init extends BaseCommand
 		$fof->addAttribute('type', 'library');
 		$fof->addAttribute('id', 'fof30');
 
-		$xml = $xml->asXML();
-
-		$domDocument = new \DOMDocument('1.0');
-		$domDocument->loadXML($xml);
-		$domDocument->preserveWhiteSpace = false;
-		$domDocument->formatOutput = true;
-		$xml = $domDocument->saveXML();
-
-		//TODO: Check
-		file_put_contents($this->basePath . $this->config->paths->src . 'pkg_' . $this->config->name . '.xml', $xml);
+		$this->saveXML($xml->asXML(), $this->basePath . $this->config->paths->src . 'pkg_' . $this->config->name . '.xml');
 	}
 }

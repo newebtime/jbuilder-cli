@@ -119,21 +119,28 @@ class Add extends AbstractComponent
 			'Update package XML file'
 		]);
 
-		// TODO: Check
-		if (!mkdir($this->component->path))
+		if (!@mkdir($this->component->path))
 		{
 			$this->io->error([
 				'Component directory creation failed',
 				'It is not possible to create the component directory, please check your access level'
 			]);
 
-			return;
+			exit;
 		}
 
 		foreach ($this->component->paths as $path)
 		{
-			// TODO: Check
-			mkdir($this->component->path . $path);
+			if (!@mkdir($this->component->path . $path))
+			{
+				//TODO: Error
+			}
+		}
+
+		if (!@mkdir($this->component->path . $this->component->paths['language'] . 'frontend/en-GB', 0777, true)
+			|| !@mkdir($this->component->path . $this->component->paths['language'] . 'backend/en-GB', 0777, true))
+		{
+			//TODO: Error
 		}
 
 		$this->updateProject();
@@ -149,38 +156,47 @@ class Add extends AbstractComponent
 		if ($input->isInteractive()
 			&& $this->io->confirm('Install the component on the demo?'))
 		{
-			$fromPath   = $this->component->path . $this->component->paths['backend'];
-			$targetPath = $this->basePath . $this->config->paths->demo . 'administrator/components/' . $this->component->comName;
+			$lns = [
+				[
+					'from' => $this->component->path . $this->component->paths['backend'],
+					'to'   => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $this->component->comName
+				],
+				[
+					'from' => $this->component->path . $this->component->paths['frontend'],
+					'to'   => $this->basePath . $this->config->paths->demo . 'components/' . $this->component->comName
+				],
+				[
+					'from' => $this->component->path . $this->component->paths['media'],
+					'to'   => $this->basePath . $this->config->paths->demo . 'media/' . $this->component->comName
+				],
+				[
+					'from' => $this->component->path . $this->component->paths['language'] . 'frontend/en-GB/en-GB.' . $this->component->comName . '.ini',
+					'to'   => $this->basePath . $this->config->paths->demo . 'administrator/language/en-GB/en-GB.' . $this->component->comName . '.ini'
+				],
+				[
+					'from' => $this->component->path . $this->component->paths['language'] . 'backend/en-GB/en-GB.' . $this->component->comName . '.ini',
+					'to'   => $this->basePath . $this->config->paths->demo . 'language/en-GB/en-GB.' . $this->component->comName . '.ini'
+				],
+				[
+					'from' => $this->component->path . $this->component->name . '.xml',
+					'to'   => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $this->component->comName . '/' . $this->component->name . '.xml'
+				]
+			];
 
-			`ln -sf $fromPath $targetPath`;
+			foreach ($lns as $ln)
+			{
+				$from = $ln['from'];
+				$to   = $ln['to'];
 
-			$fromPath   = $this->component->path . $this->component->paths['frontend'];
-			$targetPath = $this->basePath . $this->config->paths->demo . 'components/' . $this->component->comName;
+				`ln -sf $from $to`;
+			}
 
-			`ln -sf $fromPath $targetPath`;
-
-			$fromPath   = $this->component->path . $this->component->paths['media'];
-			$targetPath = $this->basePath . $this->config->paths->demo . 'media/' . $this->component->comName;
-
-			`ln -sf $fromPath $targetPath`;
-
-			//TODO: Generate languages
-			//$fromPath   = $this->component->path . $this->component->paths['language'];
-			//$targetPath = $this->basePath . $this->config->paths->demo . 'media/' . $this->component->comName;
-
-			//`ln -sf $fromPath $targetPath`;
-
-			$fromPath   = $this->component->path . $this->component->name . '.xml';
-			$targetPath = $this->basePath . $this->config->paths->demo . 'administrator/components/' . $this->component->comName . '/' . $this->component->name . '.xml';
-
-			`ln -sf $fromPath $targetPath`;
-
-			$arguments = new ArrayInput(array(
+			$arguments = new ArrayInput([
 				'extension:install',
 				'site'      => $this->config->paths->demo,
 				'extension' => $this->component->comName,
 				'--www'     => $this->basePath
-			));
+			]);
 
 			$command = new ExtensionInstall();
 			$command->run($arguments, $output);
@@ -320,11 +336,29 @@ class Add extends AbstractComponent
 		$php .= PHP_EOL;
 		$php .=  'FOF30\Container\Container::getInstance(\'' . $this->component->comName . '\')->dispatcher->dispatch();'. PHP_EOL;
 
-		// TODO: Check
-		file_put_contents($this->component->path . $this->component->paths['backend'] . $this->component->name . '.php', $php);
-		file_put_contents($this->component->path . $this->component->paths['frontend'] . $this->component->name . '.php', $php);
 
-		//TODO: Create the default language files
+		if (!@file_put_contents($this->component->path . $this->component->paths['backend'] . $this->component->name . '.php', $php))
+		{
+			// TODO: Error
+		}
+		if (!@file_put_contents($this->component->path . $this->component->paths['frontend'] . $this->component->name . '.php', $php))
+		{
+			// TODO: Error
+		}
+
+		$langFiles = [
+			$this->component->path . $this->component->paths['language'] . 'frontend/en-GB/en-GB.' . $this->component->comName . '.ini',
+			$this->component->path . $this->component->paths['language'] . 'backend/en-GB/en-GB.' . $this->component->comName . '.ini'
+		];
+
+		//TODO: Save component description if set
+		foreach ($langFiles as $file)
+		{
+			if (!@touch($file))
+			{
+				//TODO: Error
+			}
+		}
 	}
 
 	public function generateXml()

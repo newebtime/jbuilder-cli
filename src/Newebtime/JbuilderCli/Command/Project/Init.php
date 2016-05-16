@@ -96,17 +96,26 @@ class Init extends BaseCommand
 
 		$name = $this->io->ask('What is the package name?', 'myproject');
 
-		$src = $this->io->ask('Define the sources directory', 'src');
-		$src = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+		//TODO: Rework
+		$src = 'src/';
+		$srcComponents = 'components/';
+		$srcLibraries = 'libraries/';
+		$srcDemo = 'demo/';
 
-		$srcComponents = $this->io->ask('Define the components directory (relative to the sources directory)', 'components');
-		$srcComponents = rtrim($srcComponents, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+		if (!$this->io->confirm('Use the default structure?'))
+		{
+			$src = $this->io->ask('Define the sources directory', 'src');
+			$src = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-		$srcLibraries = $this->io->ask('Define the libraries directory (relative to the sources directory)', 'libraries');
-		$srcLibraries = rtrim($srcLibraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+			$srcComponents = $this->io->ask('Define the components directory (relative to the sources directory)', 'components');
+			$srcComponents = rtrim($srcComponents, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-		$srcDemo = $this->io->ask('Define the Joomla website directory', 'demo');
-		$srcDemo = rtrim($srcDemo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+			$srcLibraries = $this->io->ask('Define the libraries directory (relative to the sources directory)', 'libraries');
+			$srcLibraries = rtrim($srcLibraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+			$srcDemo = $this->io->ask('Define the Joomla website directory', 'demo');
+			$srcDemo = rtrim($srcDemo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+		}
 
 		$this->ignoreDemo = $this->io->confirm('Add the demo in .gitignore?');
 

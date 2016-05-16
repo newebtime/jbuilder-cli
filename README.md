@@ -8,7 +8,7 @@ Joomla/FOF component. It is designed to work on Linux and MacOS
 
 # Installation
 
-1. Install using Composer:
+Using Composer:
 
 `$ composer global require newebtime/jbuilder-cli`
 
@@ -24,14 +24,14 @@ For example you can have 1 component, 3 modules, and 2 libraries or 2 components
 
 It is basicaly a Joomla package.
 
-1. Create the new project inside an existing directory
+### Create the new project inside an existing directory
 
-`$ php jbuilder project:init path/of/project`
+`$ jbuilder project:init path/of/project`
 
 It will ask you some question about the structure you want for the project.
 Then it will create the structure tree in the project directory.
 
-2. Install the demo website and FOF
+### Install the demo website and FOF
 
 This step will download the last version of Joomla, install it then download FOF and install it.
 After that it will copy FOF inside your project libraries.
@@ -40,18 +40,18 @@ For now you cannot use an existing website, it is a todo for later :)
 
 `$ cd path/of/project`
 
-`$ php jbuilder project:install`
+`$ jbuilder project:install`
 
-3. Create a component inside the project.
+### Create a component inside the project.
 
 Now you have the minimum requirement installed, you will have to add at least one component
 
-`$ php jbuilder component:create com_todo`
+`$ jbuilder component:create com_todo`
 
 It will ask you some questions about the structure and informations. Then it will generate
 the base files (PHP and XML) and update the package XML.
 
-4. Start building your component
+### Start building your component
 
 Your first component is now init, [go to the wiki page](https://github.com/newebtime/jbuilder-cli/wiki)
 to have more documentation to start building it.

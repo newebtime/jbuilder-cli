@@ -24,7 +24,7 @@ class Entity extends AbstractComponent
 
 		$this
 			->setName('component:entity')
-			->setDescription('Generate a new component entity')
+			->setDescription('Generate a new component entity (e.g. todos)')
 			->addOption(
 				'name',
 				null,
@@ -73,6 +73,8 @@ class Entity extends AbstractComponent
 			exit;
 		}
 
+		//TODO: check plurial
+
 		$this->entity = $name;
 	}
 
@@ -81,7 +83,94 @@ class Entity extends AbstractComponent
 	 */
 	protected function interact(InputInterface $input, OutputInterface $output)
 	{
-		//
+		$this->io->section('Database table');
+
+		//TODO: Detect if the entity table already exists in the database.
+		$hasTable = 0;
+
+		if ($hasTable)
+		{
+			//TODO: Ask to use or delete
+		}
+
+		if (!$hasTable)
+		{
+			$this->io->note('No table found for this entity in the database');
+
+			$this->io->table(['type', 'description'], [
+				['default', 'Fields: id, title, created_on, created_by, modified_on, modified_by'],
+				['builder', 'Create the table using the CLI builder'],
+				['none',    'No table, Model and Layouts will not be generated']
+			]);
+
+			$type = $this->io->choice('What table generator do you want to use for this entity?', ['default', 'builder', 'none'], 'default');
+
+			if ('default' == $type)
+			{
+				$tableName = '#__' . $this->component->name . '_' . $this->entity;
+
+				$inflector = new \FOF30\Inflector\Inflector();
+
+				$viewSingular = $inflector->singularize($this->entity);
+				$idFieldName = $this->component->name . '_' . $viewSingular . '_id';
+
+				$xml = new \SimpleXMLElement('<xml></xml>');
+
+				$database = $xml->addChild('database');
+
+				$table = $database->addChild('table_structure');
+				$table->addAttribute('name', $tableName);
+
+				$field = $table->addChild('field');
+				$field->addAttribute('Field', $idFieldName);
+				$field->addAttribute('Type', 'INT(11) UNSIGNED');
+				$field->addAttribute('Null', 'NO');
+				$field->addAttribute('Extra', 'AUTO_INCREMENT');
+
+				$field = $table->addChild('field');
+				$field->addAttribute('Field', 'title');
+				$field->addAttribute('Type', 'VARCHAR(255)');
+				$field->addAttribute('Null', 'NO');
+
+				$field = $table->addChild('field');
+				$field->addAttribute('Field', 'created_on');
+				$field->addAttribute('Type', 'DATE');
+				$field->addAttribute('Null', 'NO');
+
+				$field = $table->addChild('field');
+				$field->addAttribute('Field', 'created_by');
+				$field->addAttribute('Type', 'INT(11) UNSIGNED');
+				$field->addAttribute('Null', 'NO');
+
+				$field = $table->addChild('field');
+				$field->addAttribute('Field', 'modified_on');
+				$field->addAttribute('Type', 'DATE');
+				$field->addAttribute('Null', 'NO');
+
+				$field = $table->addChild('field');
+				$field->addAttribute('Field', 'modified_by');
+				$field->addAttribute('Type', 'INT(11) UNSIGNED');
+				$field->addAttribute('Null', 'NO');
+
+				$key = $table->addChild('key');
+				$key->addAttribute('Key_name', 'PRIMARY');
+				$key->addAttribute('Column_name', $idFieldName);
+
+				// Force to MySQLi, PDO has no xmlToCreate()
+				$importer = new \JDatabaseImporterMysqli();
+				$importer->setDbo(\JFactory::getDbo());
+
+				$importer->from($xml)->mergeStructure();
+			}
+			elseif ('builder' == $type)
+			{
+				//TODO: Builder : Load the table builder
+			}
+			else
+			{
+				//TODO: None    : No database, disabled Model and Layouts, add caution or note.
+			}
+		}
 	}
 
 	/**
@@ -109,24 +198,23 @@ class Entity extends AbstractComponent
 		$this->generateView($sections);
 
 		//TODO: Allow to create Non database aware controller and model (not possible using FOF scaffolding)
-		//TODO: Simple database table creation? Or import SQL file ? Uhm
 	}
 
 	protected function generateController($sections)
 	{
 		$view = $this->entity;
 
+		// Let's force the use of the Magic Factory
+		$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
+
+		$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
+		$container->factory->setSaveScaffolding(true);
+
+		// plural / singular
+		$view = $container->inflector->singularize($view);
+
 		foreach ($sections as $section)
 		{
-			// Let's force the use of the Magic Factory
-			$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
-
-			$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
-			$container->factory->setSaveScaffolding(true);
-
-			// plural / singular
-			$view = $container->inflector->singularize($view);
-
 			$classname = $container->getNamespacePrefix($section) . 'Controller\\' . ucfirst($view);
 
 			$scaffolding = new \FOF30\Factory\Scaffolding\Controller\Builder($container);
@@ -134,32 +222,80 @@ class Entity extends AbstractComponent
 
 			if(!$scaffolding->make($classname, $view))
 			{
-				throw new \RuntimeException("An error occurred while creating the Controller class");
+				$this->io->error('An error occurred while creating the Controller class');
+
+				exit;
 			}
 		}
 	}
 
 	protected function generateLayouts($sections)
 	{
-		//TODO: Generate Layouts
+		$view = ucfirst($this->entity);
+
+		// Let's force the use of the Magic Factory
+		$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
+
+		// Let's force the use of the Magic Factory
+		$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
+		$container->factory->setSaveScaffolding(true);
+
+		$types = [
+			'admin' => ['default', 'form'],
+			'site'  => ['default', 'item']
+		];
+
+		$originalFrontendPath = $container->frontEndPath;
+		$originalBackendPath  = $container->backEndPath;
+
+		foreach ($sections as $section)
+		{
+			foreach ($types[$section] as $type)
+			{
+				// plural / singular
+				if ($type != 'default')
+				{
+					$view = $container->inflector->singularize($view);
+				}
+				else
+				{
+					$view = $container->inflector->pluralize($view);
+				}
+
+				$container->frontEndPath = ($section == 'admin') ? $container->backEndPath : $container->frontEndPath;
+
+				$scaffolding = new \FOF30\Factory\Scaffolding\Layout\Builder($container);
+
+				if(!$scaffolding->make('form.' . $type, $view))
+				{
+					$this->io->error('An error occurred while creating the Controller class');
+
+					exit;
+				}
+
+				// And switch them back!
+				$container->frontEndPath = $originalFrontendPath;
+				$container->backEndPath  = $originalBackendPath;
+			}
+		}
 	}
 
 	protected function generateModel($sections)
 	{
 		$view = $this->entity;
 
+		// Let's force the use of the Magic Factory
+		$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
+
+		// Let's force the use of the Magic Factory
+		$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
+		$container->factory->setSaveScaffolding(true);
+
+		// plural / singular
+		$view = $container->inflector->pluralize($view);
+
 		foreach ($sections as $section)
 		{
-			// Let's force the use of the Magic Factory
-			$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
-
-			// Let's force the use of the Magic Factory
-			$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
-			$container->factory->setSaveScaffolding(true);
-
-			// plural / singular
-			$view = $container->inflector->pluralize($view);
-
 			$classname = $container->getNamespacePrefix($section) . 'Model\\' . ucfirst($view);
 
 			$scaffolding = new \FOF30\Factory\Scaffolding\Model\Builder($container);
@@ -167,7 +303,9 @@ class Entity extends AbstractComponent
 
 			if(!$scaffolding->make($classname, $view))
 			{
-				throw new \RuntimeException("An error occurred while creating the Model class");
+				$this->io->error('An error occurred while creating the Model class');
+
+				exit;
 			}
 		}
 	}
@@ -176,18 +314,18 @@ class Entity extends AbstractComponent
 	{
 		$view = $this->entity;
 
+		// Let's force the use of the Magic Factory
+		$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
+
+		// Let's force the use of the Magic Factory
+		$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
+		$container->factory->setSaveScaffolding(true);
+
+		// plural / singular
+		$view = $container->inflector->pluralize($view);
+
 		foreach ($sections as $section)
 		{
-			// Let's force the use of the Magic Factory
-			$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
-
-			// Let's force the use of the Magic Factory
-			$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
-			$container->factory->setSaveScaffolding(true);
-
-			// plural / singular
-			$view = $container->inflector->pluralize($view);
-
 			$classname = $container->getNamespacePrefix($section) . 'View\\' . ucfirst($view) . '\\Html';
 
 			$scaffolding = new \FOF30\Factory\Scaffolding\View\Builder($container);
@@ -195,7 +333,9 @@ class Entity extends AbstractComponent
 
 			if(!$scaffolding->make($classname, $view, 'html'))
 			{
-				throw new \RuntimeException("An error occurred while creating the Model class");
+				$this->io->error('An error occurred while creating the View class');
+
+				exit;
 			}
 		}
 	}

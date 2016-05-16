@@ -1,59 +1,44 @@
-# JBuilder
+# JBuilder CLI
 
 JBuilder CLI is a command line tool created to simplify the creation and management of
-Joomla/FOF component. It is designed to work on Linux and MacOS
+Joomla/FOF components. It is designed to work on Linux and MacOS
 (it use symlink which are not working on Windows).
 
 > JBuilder CLI is a WIP, the code is a bit messy. :-(
 
-# Installation
-
-Using Composer:
+## Installation
 
 `$ composer global require newebtime/jbuilder-cli`
 
-> If you have not installed composer yet... just do it.
-> https://getcomposer.org/
+> If you have not installed composer yet... [just do it](https://getcomposer.org/).
 
-# How to use?
+## How to use?
 
-## Create a project
+### Create a project
 
 A project is not only your component, but it is your component(s) and everything related.
 For example you can have 1 component, 3 modules, and 2 libraries or 2 components and 1 plugins.
 
 It is basicaly a Joomla package.
 
-### Create the new project inside an existing directory
+Init the project
 
-`$ jbuilder project:init path/of/project`
+```
+$ jbuilder project:init path/of/project
+```
+Then install the requirements
+```
+$ cd path/of/project
+$ jbuilder project:install
+```
 
-It will ask you some question about the structure you want for the project.
-Then it will create the structure tree in the project directory.
+### Add a component and build it
 
-### Install the demo website and FOF
+```
+$ jbuilder component:create com_todo
+```
 
-This step will download the last version of Joomla, install it then download FOF and install it.
-After that it will copy FOF inside your project libraries.
-
-For now you cannot use an existing website, it is a todo for later :)
-
-`$ cd path/of/project`
-
-`$ jbuilder project:install`
-
-### Create a component inside the project.
-
-Now you have the minimum requirement installed, you will have to add at least one component
-
-`$ jbuilder component:create com_todo`
-
-It will ask you some questions about the structure and informations. Then it will generate
-the base files (PHP and XML) and update the package XML.
-
-### Start building your component
-
-Your first component is now init, [go to the wiki page](https://github.com/newebtime/jbuilder-cli/wiki)
+Your first component is now added, [go to the wiki page](https://github.com/newebtime/jbuilder-cli/wiki)
 to have more documentation to start building it.
 
 # TODO

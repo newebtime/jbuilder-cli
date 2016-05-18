@@ -9,6 +9,7 @@ namespace Newebtime\JbuilderCli\Command\Project;
 
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
@@ -30,6 +31,11 @@ class Init extends BaseCommand
 				'path',
 				InputArgument::OPTIONAL,
 				'The path of the directory'
+			)->addOption(
+				'name',
+				null,
+				InputOption::VALUE_OPTIONAL,
+				'The project name'
 			);
 	}
 
@@ -70,6 +76,28 @@ class Init extends BaseCommand
 			}
 
 			$this->basePath = $path;
+
+			$this->config = (object) [
+				'paths' => [
+					'src'        => 'src/',
+					'components' => 'components/',
+					'libraries'  => 'libraries/',
+					'demo'       => 'demo/'
+				],
+				'infos' => [
+					'author'      => 'me',
+					'email'       => 'me@domain.tld',
+					'url'         => 'http://www.domain.tld',
+					'copyright'   => 'Copyright (c) 2016 Me',
+					'license'     => 'GNU General Public License version 2 or later',
+					'description' => ''
+				]
+			];
+
+			if ($name = $input->getOption('name'))
+			{
+				$this->config->name = $name;
+			}
 		}
 		catch (OutputException $e)
 		{
@@ -96,45 +124,57 @@ class Init extends BaseCommand
 
 		$name = $this->io->ask('What is the package name?', 'myproject');
 
-		//TODO: Rework
-		$src = 'src/';
-		$srcComponents = 'components/';
-		$srcLibraries = 'libraries/';
-		$srcDemo = 'demo/';
+		$this->config->name = $name;
 
 		if (!$this->io->confirm('Use the default structure?'))
 		{
 			$src = $this->io->ask('Define the sources directory', 'src');
 			$src = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-			$srcComponents = $this->io->ask('Define the components directory (relative to the sources directory)', 'components');
-			$srcComponents = rtrim($srcComponents, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+			$components = $this->io->ask('Define the components directory (relative to the sources directory)', 'components');
+			$components = rtrim($components, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-			$srcLibraries = $this->io->ask('Define the libraries directory (relative to the sources directory)', 'libraries');
-			$srcLibraries = rtrim($srcLibraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+			$libraries = $this->io->ask('Define the libraries directory (relative to the sources directory)', 'libraries');
+			$libraries = rtrim($libraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-			$srcDemo = $this->io->ask('Define the Joomla website directory', 'demo');
-			$srcDemo = rtrim($srcDemo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+			$demo = $this->io->ask('Define the Joomla website directory', 'demo');
+			$demo = rtrim($demo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+			$this->io->comment([
+				'Sources    ' . $src,
+				'Components ' . $src . $components,
+				'Libraries  ' . $src . $libraries,
+				'Demo       ' . $demo
+			]);
+
+			$this->config->paths = [
+				'src'        => $src,
+				'components' => $components,
+				'libraries'  => $libraries,
+				'demo'       => $demo
+			];
+		}
+
+		if (!$this->io->confirm('Use the default informations (author, copyright, etc)?'))
+		{
+			$author      = $this->io->ask('Define the author?', 'me');
+			$email       = $this->io->ask('Define the email?', 'me@domain.tld');
+			$url         = $this->io->ask('Define the website URL', 'http://www.domain.tld');
+			$copyright   = $this->io->ask('Define the copyright', 'Copyright (c) 2016 Me');
+			$license     = $this->io->ask('Define the license', 'GNU General Public License version 2 or later');
+			$description = $this->io->ask('Define the description', '');
+
+			$this->config->infos = [
+				'author'      => $author,
+				'email'       => $email,
+				'url'         => $url,
+				'copyright'   => $copyright,
+				'license'     => $license,
+				'description' => $description
+			];
 		}
 
 		$this->ignoreDemo = $this->io->confirm('Add the demo in .gitignore?');
-
-		$this->io->comment([
-			'Sources    ' . $src,
-			'Components ' . $src . $srcComponents,
-			'Libraries  ' . $src . $srcLibraries,
-			'Demo       ' . $srcDemo
-		]);
-
-		$this->config = (object) [
-			'name'  => $name,
-			'paths' => [
-				'src'        => $src,
-				'components' => $srcComponents,
-				'libraries'  => $srcLibraries,
-				'demo'       => $srcDemo
-			]
-		];
 	}
 
 	/**
@@ -145,6 +185,13 @@ class Init extends BaseCommand
 		try
 		{
 			$this->io->section('Project creation');
+
+			if (empty($this->config->name))
+			{
+				throw new OutputException([
+					'Action canceled, enter a name for this project'
+				], 'warning');
+			}
 
 			$path = $this->basePath;
 
@@ -225,9 +272,12 @@ class Init extends BaseCommand
 		$xml->addAttribute('method', 'upgrade');
 
 		$xml->addChild('name', $this->config->name);
+		$xml->addChild('author', $this->config->infos->author);
 		$xml->addChild('creationDate', date('Y-m-d'));
 		$xml->addChild('packagename', $this->config->name);
 		$xml->addChild('version', '0.0.1');
+		$xml->addChild('url', $this->config->infos->url);
+		$xml->addChild('description', $this->config->infos->description);
 
 		$fof = $xml
 			->addChild('files')

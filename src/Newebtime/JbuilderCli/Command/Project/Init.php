@@ -147,7 +147,7 @@ class Init extends BaseCommand
 				'Demo       ' . $demo
 			]);
 
-			$this->config->paths = [
+			$this->config->paths = (object) [
 				'src'        => $src,
 				'components' => $components,
 				'libraries'  => $libraries,

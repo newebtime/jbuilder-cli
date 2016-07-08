@@ -78,13 +78,13 @@ class Init extends BaseCommand
 			$this->basePath = $path;
 
 			$this->config = (object) [
-				'paths' => [
+				'paths' => (object) [
 					'src'        => 'src/',
 					'components' => 'components/',
 					'libraries'  => 'libraries/',
 					'demo'       => 'demo/'
 				],
-				'infos' => [
+				'infos' => (object) [
 					'author'      => 'me',
 					'email'       => 'me@domain.tld',
 					'url'         => 'http://www.domain.tld',

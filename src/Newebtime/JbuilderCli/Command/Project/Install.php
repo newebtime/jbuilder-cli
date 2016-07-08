@@ -155,6 +155,8 @@ class Install extends BaseCommand
 		$version = str_replace('.', '-', $versions->getLatestRelease());
 		$package = str_replace('{VERSION}', $version, 'https://www.akeebabackup.com/download/fof3/{VERSION}/lib_fof30-{VERSION}-zip.zip');
 
+		$this->io->note('Version: ' . $version);
+
 		if (!$name = \JInstallerHelper::downloadPackage($package))
 		{
 			$this->io->warning('Action cancel, impossible to download FOF package');
@@ -181,7 +183,20 @@ class Install extends BaseCommand
 		$resultPath = $result['dir'];
 		$destPath   = $this->basePath . '/' . $this->config->paths->src . $this->config->paths->libraries . 'fof30';
 
-		if (!\JFolder::copy($resultPath, $destPath))
+		if (is_dir($destPath))
+		{
+			if ('delete' == $this->io->choice('FOF directoty detected in your libraries sources, use it?', ['use', 'delete'], 'delete'))
+			{
+				\JFolder::delete($destPath);
+			}
+			else
+			{
+				$skipCopy = true;
+			}
+		}
+
+		if (!isset($skipCopy)
+			&& !\JFolder::copy($resultPath, $destPath))
 		{
 			$this->io->warning('Action cancel, impossible to copy FOF to the library directory');
 
@@ -196,12 +211,14 @@ class Install extends BaseCommand
 		$linkPath   = $destPath . '/fof';
 		$linkTarget = $this->basePath . '/' . $this->config->paths->demo . 'libraries/fof30';
 
-		`ln -sf $linkPath $linkTarget`;
+		//TODO: Check
+		symlink($linkPath, $linkTarget);
 
 		$linkXMLPath   = $destPath . '/fof/lib_fof30.xml';
 		$linkXMLTarget = $this->basePath . '/' . $this->config->paths->demo . 'administrator/manifests/libraries/lib_fof30.xml';
 
-		`ln -sf $linkXMLPath $linkXMLTarget`;
+		//TODO: Check
+		symlink($linkXMLPath, $linkXMLTarget);
 
 		$arguments = new ArrayInput(array(
 			'extension:install',

@@ -46,7 +46,6 @@ to have more documentation to start building it.
 - Ask more informations for the project
 - Create a composer.json with the packagename as name
 - Do some check and validation (package name, paths)
-- Add message during the Install (e.g. "Downloading Joomla, etc")
 - Ask to add fof30 to .gitignore (it will be downloaded automaticaly on project:install)
 - Refactorize a bit, it become messy
 - Add help to each command
@@ -55,7 +54,8 @@ to have more documentation to start building it.
 
 * [Composer](https://getcomposer.org/)
   * [Joomlatools Console](https://github.com/joomlatools/joomlatools-console/)
-* Joomla 3.3+ and FOF 3.0+ (automaticaly installed)
+* Joomla 3.4.2+ (automaticaly installed)
+  * FOF 3.0+ (automaticaly installed)
 
 # License
 

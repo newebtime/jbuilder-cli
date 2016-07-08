@@ -18,6 +18,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
+use Newebtime\JbuilderCli\Exception\OutputException;
 
 class Install extends BaseCommand
 {
@@ -45,32 +46,81 @@ class Install extends BaseCommand
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output)
 	{
-		$this->io->section('Joomla');
-		$this->installJoomla($input, $output);
-		$this->io->success('Demo website installation completed');
+		try
+		{
+			$this->installJoomla($input, $output);
+			$this->installFof($input, $output);
+			$this->installPackage($input, $output);
+		}
+		catch (OutputException $e)
+		{
+			$type = $e->getType();
 
-		$this->io->section('FOF');
-		$this->installFof($input, $output);
-		$this->io->success('FOF installation completed');
+			$this->io->$type($e->getMessages());
 
-		$this->io->section('Package');
-		$this->installPackage($input, $output);
-		$this->io->success('Package installation completed');
+			exit;
+		}
+		catch (\Exception $e)
+		{
+			$this->io->error($e->getMessage());
+
+			exit;
+		}
 	}
 
 	public function installJoomla(InputInterface $input, OutputInterface $output)
 	{
+		$this->io->section('Joomla');
+
+		if (file_exists($this->basePath . $this->config->paths->demo . '/includes/defines.php'))
+		{
+			if ('use' == $this->io->choice('Joomla already exists, do you want to use it?', ['use', 'delete'], 'use'))
+			{
+				$this->io->note('Skipped Joomla installation');
+
+				return;
+			}
+
+			$this->io->note('Deleting current Joomla instance');
+
+			$demoPath = $this->basePath . $this->config->paths->demo;
+
+			$files = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator($demoPath, \RecursiveDirectoryIterator::SKIP_DOTS),
+				\RecursiveIteratorIterator::CHILD_FIRST
+			);
+
+			/** @var \SplFileInfo $fileInfo */
+			foreach ($files as $fileInfo)
+			{
+				if ($fileInfo->isLink())
+				{
+					unlink($fileInfo->getPathname());
+				}
+				elseif ($fileInfo->isDir())
+				{
+					rmdir($fileInfo->getRealPath());
+				}
+				else
+				{
+					unlink($fileInfo->getRealPath());
+				}
+			}
+
+			$this->io->success('Deleting completed');
+		}
+
 		$this->io->note('Start downloading Joomla');
 
 		$arguments = [
 			'site:download',
 			'site'      => $this->config->paths->demo,
 			'--refresh' => true,
-			'--www'     => $this->basePath
+			'--www'     => $this->basePath,
 		];
 
 		$command = new SiteDownload();
-		$command->run(new ArrayInput($arguments), $output);
+		$command->run(new ArrayInput($arguments), $this->io);
 
 		$this->io->note('Start Installing Joomla');
 
@@ -79,16 +129,20 @@ class Install extends BaseCommand
 			'site'          => $this->config->paths->demo,
 			'--www'         => $this->basePath,
 			'--sample-data' => 'default',
-			'--interactive' => true
+			'--interactive' => true,
 		];
 
 		$command = new SiteInstall();
 		$command->setApplication($this->getApplication());
-		$command->run(new ArrayInput($arguments), $output);
+		$command->run(new ArrayInput($arguments), $this->io);
+
+		$this->io->success('Demo website installation completed');
 	}
 
 	public function installFof(InputInterface $input, OutputInterface $output)
 	{
+		$this->io->section('FOF');
+
 		$this->io->note('Start downloading FOF');
 
 		$app = Bootstrapper::getApplication($this->basePath . '/' . $this->config->paths->demo);
@@ -153,17 +207,21 @@ class Install extends BaseCommand
 			'extension:install',
 			'site'      => $this->config->paths->demo,
 			'extension' => 'lib_fof30',
-			'--www'     => $this->basePath
+			'--www'     => $this->basePath,
 		));
 
 		$command = new ExtensionInstall();
 		$command->run($arguments, $output);
 
 		ob_end_clean();
+
+		$this->io->success('FOF installation completed');
 	}
 
 	public function installPackage(InputInterface $input, OutputInterface $output)
 	{
+		$this->io->section('Package');
 		//TODO: ln the pkg_ then install all the other libraries and components if any
+		$this->io->success('Package installation completed');
 	}
 }

@@ -1,7 +1,7 @@
 # JBuilder CLI
 
 JBuilder CLI is a command line tool created to simplify the creation and management of
-Joomla/FOF components. It is designed to work on Linux and MacOS. Windows use should be able
+Joomla/FOF components. It is designed to work on Linux and MacOS. Windows users should be able
 to use it, but some command may not work.
 
 > JBuilder CLI is a WIP, the code is a bit messy. :-(
@@ -45,9 +45,7 @@ to have more documentation to start building it.
 
 - Ask more informations for the project
 - Create a composer.json with the packagename as name
-- Do some check and validation (package name, paths)
 - Ask to add fof30 to .gitignore (it will be downloaded automaticaly on project:install)
-- Refactorize a bit, it become messy
 - Add help to each command
 
 # Requirements

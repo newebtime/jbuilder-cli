@@ -48,9 +48,11 @@ class Install extends BaseCommand
 	{
 		try
 		{
-			$this->installJoomla($input, $output);
-			$this->installFof($input, $output);
-			$this->installPackage($input, $output);
+			$this->installJoomla();
+			$this->installFof();
+			$this->installPackage();
+
+			$this->io->success('Install command completed');
 		}
 		catch (OutputException $e)
 		{
@@ -68,7 +70,7 @@ class Install extends BaseCommand
 		}
 	}
 
-	public function installJoomla(InputInterface $input, OutputInterface $output)
+	public function installJoomla()
 	{
 		$this->io->section('Joomla');
 
@@ -139,7 +141,7 @@ class Install extends BaseCommand
 		$this->io->success('Demo website installation completed');
 	}
 
-	public function installFof(InputInterface $input, OutputInterface $output)
+	public function installFof()
 	{
 		$this->io->section('FOF');
 
@@ -159,7 +161,7 @@ class Install extends BaseCommand
 
 		if (!$name = \JInstallerHelper::downloadPackage($package))
 		{
-			$this->io->warning('Action cancel, impossible to download FOF package');
+			$this->io->warning('Section [FOF] aborted, impossible to download FOF package');
 
 			return;
 		}
@@ -175,7 +177,7 @@ class Install extends BaseCommand
 
 		if (!$result = \JInstallerHelper::unpack($pkgPath))
 		{
-			$this->io->warning('Action cancel, impossible to unpack FOF package');
+			$this->io->warning('Section [FOF] aborted, impossible to unpack FOF package');
 
 			return;
 		}
@@ -198,7 +200,7 @@ class Install extends BaseCommand
 		if (!isset($skipCopy)
 			&& !\JFolder::copy($resultPath, $destPath))
 		{
-			$this->io->warning('Action cancel, impossible to copy FOF to the library directory');
+			$this->io->warning('Section [FOF] aborted, impossible to copy FOF to the package directory');
 
 			return;
 		}
@@ -208,17 +210,25 @@ class Install extends BaseCommand
 			$this->io->note('Joomla temp directory could not be cleaned');
 		}
 
-		$linkPath   = $destPath . '/fof';
-		$linkTarget = $this->basePath . '/' . $this->config->paths->demo . 'libraries/fof30';
+		$target = $destPath . '/fof';
+		$link   = $this->basePath . '/' . $this->config->paths->demo . 'libraries/fof30';
 
-		//TODO: Check
-		symlink($linkPath, $linkTarget);
+		if (@symlink($target, $link))
+		{
+			$this->io->warning('Section [FOF] aborted, impossible to link the library directory');
 
-		$linkXMLPath   = $destPath . '/fof/lib_fof30.xml';
-		$linkXMLTarget = $this->basePath . '/' . $this->config->paths->demo . 'administrator/manifests/libraries/lib_fof30.xml';
+			return;
+		}
 
-		//TODO: Check
-		symlink($linkXMLPath, $linkXMLTarget);
+		$target = $destPath . '/fof/lib_fof30.xml';
+		$link   = $this->basePath . '/' . $this->config->paths->demo . 'administrator/manifests/libraries/lib_fof30.xml';
+
+		if (@symlink($target, $link))
+		{
+			$this->io->warning('Section [FOF] aborted, impossible to link the library XML file');
+
+			return;
+		}
 
 		$arguments = new ArrayInput(array(
 			'extension:install',
@@ -228,17 +238,35 @@ class Install extends BaseCommand
 		));
 
 		$command = new ExtensionInstall();
-		$command->run($arguments, $output);
+		$command->run($arguments, $this->io);
 
 		ob_end_clean();
 
 		$this->io->success('FOF installation completed');
 	}
 
-	public function installPackage(InputInterface $input, OutputInterface $output)
+	/**
+	 * - Link the package XML
+	 * - Detect and link the libraries and components
+	 * - Install the package
+	 */
+	public function installPackage()
 	{
 		$this->io->section('Package');
-		//TODO: ln the pkg_ then install all the other libraries and components if any
-		$this->io->success('Package installation completed');
+
+		$target = $this->basePath . '/' . $this->config->paths->src . '/pkg_' . $this->config->name . '.xml';
+		$link   = $this->basePath . '/' . $this->config->paths->demo . 'administrator/manifests/packages/pkg_' . $this->config->name . '.xml';
+
+		if (@symlink($target, $link))
+		{
+			$this->io->warning('Section [Package] aborted, impossible to link the package XML file');
+
+			return;
+		}
+
+		//TODO: Detect and install all the other libraries and components if any
+		//TODO: Refresh Joomla and install pkg
+
+		$this->io->success('Package completed');
 	}
 }

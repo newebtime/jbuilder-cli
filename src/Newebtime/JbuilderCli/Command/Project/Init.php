@@ -206,10 +206,7 @@ class Init extends BaseCommand
 			{
 				if (is_dir($mkPath))
 				{
-					$this->io->note([
-						'Skip directory creation, this directory already exists',
-						$mkPath
-					]);
+					$skips[] = $mkPath;
 				}
 				elseif (!@mkdir($mkPath))
 				{
@@ -218,6 +215,13 @@ class Init extends BaseCommand
 						$mkPath
 					], 'error');
 				}
+			}
+
+			if (isset($skips))
+			{
+				$this->io->note(
+					array_merge(['Skip directory creation, those directories already exists'], $skips)
+				);
 			}
 
 			if (!@touch($path . 'README.md'))

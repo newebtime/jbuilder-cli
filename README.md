@@ -41,13 +41,6 @@ $ jbuilder component:create com_todo
 Your first component is now added, [go to the wiki page](https://github.com/newebtime/jbuilder-cli/wiki)
 to have more documentation to start building it.
 
-# TODO
-
-- Ask more informations for the project
-- Create a composer.json with the packagename as name
-- Ask to add fof30 to .gitignore (it will be downloaded automaticaly on project:install)
-- Add help to each command
-
 # Requirements
 
 * [Composer](https://getcomposer.org/)

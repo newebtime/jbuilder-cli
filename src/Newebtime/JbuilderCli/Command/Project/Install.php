@@ -149,12 +149,19 @@ class Install extends BaseCommand
 
 		$app = Bootstrapper::getApplication($this->basePath . '/' . $this->config->paths->demo);
 
-		$versions = new Versions();
+		if ($this->hasGit()) {
+			$versions = new Versions();
 
-		$versions->setRepository('https://github.com/akeeba/fof.git');
-		$versions->refresh();
+			$versions->setRepository('https://github.com/akeeba/fof.git');
+			$versions->refresh();
 
-		$version = str_replace('.', '-', $versions->getLatestRelease());
+			$version = str_replace('.', '-', $versions->getLatestRelease());
+		} else {
+			$this->io->note('Git is not installed, impossible to detect the last version');
+
+			$version = $this->io->ask('Which version of FOF do you wan to use?');
+		}
+
 		$package = str_replace('{VERSION}', $version, 'https://www.akeebabackup.com/download/fof3/{VERSION}/lib_fof30-{VERSION}-zip.zip');
 
 		$this->io->note('Version: ' . $version);

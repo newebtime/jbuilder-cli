@@ -88,4 +88,25 @@ class Base extends Command
 
 		return true;
 	}
+
+	/**
+	 * Detect if git is installed
+	 * http://zurb.com/forrst/posts/Check_if_Git_is_installed_from_PHP-0E2
+	 *
+	 * @return bool|string
+	 */
+	protected function hasGit()
+	{
+		exec('which git', $output);
+
+		$git = file_exists($line = trim(current($output))) ? $line : 'git';
+
+		unset($output);
+
+		exec($git . ' --version', $output);
+
+		preg_match('#^(git version)#', current($output), $matches);
+
+		return ! empty($matches[0]) ? $git : false;
+	}
 }

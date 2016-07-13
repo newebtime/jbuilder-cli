@@ -52,8 +52,12 @@ class Entity extends AbstractComponent
 	{
 		parent::initialize($input, $output);
 
-		//TODO: Check
-		include_once JPATH_PLATFORM . '/fof30/include.php';
+		if (!@include_once JPATH_PLATFORM . '/fof30/include.php')
+		{
+			$this->io->warning('Action canceled, FOF could not be loaded');
+
+			exit;
+		}
 
 		$this->io->title('Generate new entity');
 
@@ -85,12 +89,33 @@ class Entity extends AbstractComponent
 	{
 		$this->io->section('Database table');
 
-		//TODO: Detect if the entity table already exists in the database.
 		$hasTable = 0;
 
-		if ($hasTable)
+		$inflector = new \FOF30\Inflector\Inflector();
+
+		$viewSingular = $inflector->singularize($this->entity);
+		$viewPlurial  = $inflector->pluralize($this->entity);
+
+		$tableName   = '#__' . $this->component->name . '_' . $viewPlurial;
+
+		try
 		{
-			//TODO: Ask to use or delete
+			\JFactory::getDbo()->getTableCreate($tableName);
+
+			$this->io->caution('A database table already exist for this entity');
+
+			if ('use' == $this->io->choice('Do you want to use this table or delete it?', ['use', 'delete'], 'use'))
+			{
+				$hasTable = 1;
+			}
+			else
+			{
+				\JFactory::getDbo()->dropTable($tableName);
+			}
+		}
+		catch (\RuntimeException $e)
+		{
+			//Nothing special
 		}
 
 		if (!$hasTable)
@@ -107,11 +132,6 @@ class Entity extends AbstractComponent
 
 			if ('default' == $type)
 			{
-				$tableName = '#__' . $this->component->name . '_' . $this->entity;
-
-				$inflector = new \FOF30\Inflector\Inflector();
-
-				$viewSingular = $inflector->singularize($this->entity);
 				$idFieldName = $this->component->name . '_' . $viewSingular . '_id';
 
 				$xml = new \SimpleXMLElement('<xml></xml>');
@@ -157,10 +177,14 @@ class Entity extends AbstractComponent
 				$key->addAttribute('Column_name', $idFieldName);
 
 				// Force to MySQLi, PDO has no xmlToCreate()
+				// Joomla Bug: https://github.com/joomla/joomla-cms/issues/10527
 				$importer = new \JDatabaseImporterMysqli();
 				$importer->setDbo(\JFactory::getDbo());
 
 				$importer->from($xml)->mergeStructure();
+
+				//TODO: Save the XML?
+				//TODO: Create a .sql file?
 			}
 			elseif ('builder' == $type)
 			{
@@ -168,7 +192,11 @@ class Entity extends AbstractComponent
 			}
 			else
 			{
-				//TODO: None    : No database, disabled Model and Layouts, add caution or note.
+				$this->io->caution([
+					'No database table found or created. Model and Layouts will not be created'
+				]);
+
+				//TODO: Disable Model and Layouts
 			}
 		}
 	}
@@ -189,12 +217,15 @@ class Entity extends AbstractComponent
 			$sections = ['admin'];
 		}
 
+		$this->container = \FOF30\Container\Container::getInstance($this->component->comName, [
+			'tempInstance' => true,
+			'factoryClass' => 'FOF30\\Factory\\MagicFactory'
+		]);
+		$this->container->factory->setSaveScaffolding(true);
+
 		$this->generateController($sections);
-
 		$this->generateLayouts($sections);
-
 		$this->generateModel($sections);
-
 		$this->generateView($sections);
 
 		//TODO: Allow to create Non database aware controller and model (not possible using FOF scaffolding)
@@ -202,22 +233,18 @@ class Entity extends AbstractComponent
 
 	protected function generateController($sections)
 	{
+		$this->io->section('Controller');
+
 		$view = $this->entity;
 
-		// Let's force the use of the Magic Factory
-		$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
-
-		$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
-		$container->factory->setSaveScaffolding(true);
-
 		// plural / singular
-		$view = $container->inflector->singularize($view);
+		$view = $this->container->inflector->singularize($view);
 
 		foreach ($sections as $section)
 		{
-			$classname = $container->getNamespacePrefix($section) . 'Controller\\' . ucfirst($view);
+			$classname = $this->container->getNamespacePrefix($section) . 'Controller\\' . ucfirst($view);
 
-			$scaffolding = new \FOF30\Factory\Scaffolding\Controller\Builder($container);
+			$scaffolding = new \FOF30\Factory\Scaffolding\Controller\Builder($this->container);
 			$scaffolding->setSection($section);
 
 			if(!$scaffolding->make($classname, $view))
@@ -231,22 +258,17 @@ class Entity extends AbstractComponent
 
 	protected function generateLayouts($sections)
 	{
+		$this->io->section('Layouts');
+
 		$view = ucfirst($this->entity);
-
-		// Let's force the use of the Magic Factory
-		$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
-
-		// Let's force the use of the Magic Factory
-		$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
-		$container->factory->setSaveScaffolding(true);
 
 		$types = [
 			'admin' => ['default', 'form'],
 			'site'  => ['default', 'item']
 		];
 
-		$originalFrontendPath = $container->frontEndPath;
-		$originalBackendPath  = $container->backEndPath;
+		$originalFrontendPath = $this->container->frontEndPath;
+		$originalBackendPath  = $this->container->backEndPath;
 
 		foreach ($sections as $section)
 		{
@@ -255,16 +277,16 @@ class Entity extends AbstractComponent
 				// plural / singular
 				if ($type != 'default')
 				{
-					$view = $container->inflector->singularize($view);
+					$view = $this->container->inflector->singularize($view);
 				}
 				else
 				{
-					$view = $container->inflector->pluralize($view);
+					$view = $this->container->inflector->pluralize($view);
 				}
 
-				$container->frontEndPath = ($section == 'admin') ? $container->backEndPath : $container->frontEndPath;
+				$this->container->frontEndPath = ($section == 'admin') ? $this->container->backEndPath : $this->container->frontEndPath;
 
-				$scaffolding = new \FOF30\Factory\Scaffolding\Layout\Builder($container);
+				$scaffolding = new \FOF30\Factory\Scaffolding\Layout\Builder($this->container);
 
 				if(!$scaffolding->make('form.' . $type, $view))
 				{
@@ -274,31 +296,26 @@ class Entity extends AbstractComponent
 				}
 
 				// And switch them back!
-				$container->frontEndPath = $originalFrontendPath;
-				$container->backEndPath  = $originalBackendPath;
+				$this->container->frontEndPath = $originalFrontendPath;
+				$this->container->backEndPath  = $originalBackendPath;
 			}
 		}
 	}
 
 	protected function generateModel($sections)
 	{
+		$this->io->section('Model');
+
 		$view = $this->entity;
 
-		// Let's force the use of the Magic Factory
-		$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
-
-		// Let's force the use of the Magic Factory
-		$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
-		$container->factory->setSaveScaffolding(true);
-
 		// plural / singular
-		$view = $container->inflector->pluralize($view);
+		$view = $this->container->inflector->pluralize($view);
 
 		foreach ($sections as $section)
 		{
-			$classname = $container->getNamespacePrefix($section) . 'Model\\' . ucfirst($view);
+			$classname = $this->container->getNamespacePrefix($section) . 'Model\\' . ucfirst($view);
 
-			$scaffolding = new \FOF30\Factory\Scaffolding\Model\Builder($container);
+			$scaffolding = new \FOF30\Factory\Scaffolding\Model\Builder($this->container);
 			$scaffolding->setSection($section);
 
 			if(!$scaffolding->make($classname, $view))
@@ -312,23 +329,18 @@ class Entity extends AbstractComponent
 
 	protected function generateView($sections)
 	{
+		$this->io->section('View');
+
 		$view = $this->entity;
 
-		// Let's force the use of the Magic Factory
-		$config = ['factoryClass' => 'FOF30\\Factory\\MagicFactory'];
-
-		// Let's force the use of the Magic Factory
-		$container = \FOF30\Container\Container::getInstance($this->component->comName, $config);
-		$container->factory->setSaveScaffolding(true);
-
 		// plural / singular
-		$view = $container->inflector->pluralize($view);
+		$view = $this->container->inflector->pluralize($view);
 
 		foreach ($sections as $section)
 		{
-			$classname = $container->getNamespacePrefix($section) . 'View\\' . ucfirst($view) . '\\Html';
+			$classname = $this->container->getNamespacePrefix($section) . 'View\\' . ucfirst($view) . '\\Html';
 
-			$scaffolding = new \FOF30\Factory\Scaffolding\View\Builder($container);
+			$scaffolding = new \FOF30\Factory\Scaffolding\View\Builder($this->container);
 			$scaffolding->setSection($section);
 
 			if(!$scaffolding->make($classname, $view, 'html'))

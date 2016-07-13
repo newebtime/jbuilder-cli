@@ -97,13 +97,13 @@ class Base extends Command
 	 */
 	protected function hasGit()
 	{
-		exec('which git', $output);
+		@exec('which git', $output);
 
 		$git = file_exists($line = trim(current($output))) ? $line : 'git';
 
 		unset($output);
 
-		exec($git . ' --version', $output);
+		@exec($git . ' --version', $output);
 
 		preg_match('#^(git version)#', current($output), $matches);
 

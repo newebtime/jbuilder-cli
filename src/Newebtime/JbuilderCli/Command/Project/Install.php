@@ -160,6 +160,7 @@ class Install extends BaseCommand
 			$this->io->note('Git is not installed, impossible to detect the last version');
 
 			$version = $this->io->ask('Which version of FOF do you wan to use?');
+			$version = str_replace('.', '-', $version);
 		}
 
 		$package = str_replace('{VERSION}', $version, 'https://www.akeebabackup.com/download/fof3/{VERSION}/lib_fof30-{VERSION}-zip.zip');
@@ -180,7 +181,7 @@ class Install extends BaseCommand
 		ob_start();
 
 		$tmpPath = $app->get('tmp_path');
-		$pkgPath = $tmpPath . $name;
+		$pkgPath = $tmpPath . '/' . $name;
 
 		if (!$result = \JInstallerHelper::unpack($pkgPath))
 		{

@@ -34,7 +34,7 @@ class Add extends AbstractComponent
 	{
 		parent::initialize($input, $output);
 
-		\JLoader::register('JFolder',  JPATH_PLATFORM . '/joomla/filesystem/folder.php');
+		\JLoader::import('joomla.filesystem.folder');
 
 		$this->io->title('Add component');
 
@@ -93,8 +93,6 @@ class Add extends AbstractComponent
 				'language' => $language
 			];
 
-			//TODO: Check paths
-
 			$this->component->paths = $paths;
 		}
 
@@ -133,14 +131,19 @@ class Add extends AbstractComponent
 		{
 			if (!@mkdir($this->component->path . $path))
 			{
-				//TODO: Error
+				$this->io->warning([
+					'Error creating the directory',
+					$this->component->path . $path
+				]);
 			}
 		}
 
 		if (!@mkdir($this->component->path . $this->component->paths['language'] . 'frontend/en-GB', 0777, true)
 			|| !@mkdir($this->component->path . $this->component->paths['language'] . 'backend/en-GB', 0777, true))
 		{
-			//TODO: Error
+			$this->io->warning([
+				'Error creating the language files'
+			]);
 		}
 
 		$this->updateProject();
@@ -188,7 +191,10 @@ class Add extends AbstractComponent
 				$from = $ln['from'];
 				$to   = $ln['to'];
 
-				`ln -sf $from $to`;
+				if (!@symlink($to, $from))
+				{
+					//TODO: Check
+				}
 			}
 
 			$arguments = new ArrayInput([
@@ -215,8 +221,10 @@ class Add extends AbstractComponent
 
 		$this->config->components->{$this->component->comName} = $config;
 
-		//TODO: Check
-		file_put_contents($this->basePath . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT));
+		if (!@file_put_contents($this->basePath . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT)))
+		{
+			//TODO: Check
+		}
 	}
 
 	public function buildFiles()

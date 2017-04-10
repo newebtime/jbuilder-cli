@@ -17,279 +17,298 @@ use Newebtime\JbuilderCli\Exception\OutputException;
 
 class Init extends BaseCommand
 {
-	protected $ignoreDemo;
+    protected $ignoreDemo;
 
-	/**
-	 * @@inheritdoc
-	 */
-	protected function configure()
-	{
-		$this
-			->setName('project:init')
-			->setDescription('Init a new development project in the directory')
-			->addArgument(
-				'path',
-				InputArgument::OPTIONAL,
-				'The path of the directory'
-			)->addOption(
-				'name',
-				null,
-				InputOption::VALUE_OPTIONAL,
-				'The project name'
-			);
-	}
+    /**
+     * @@inheritdoc
+     */
+    protected function configure()
+    {
+        $this
+            ->setName('project:init')
+            ->setDescription('Init a new development project in the directory')
+            ->addArgument(
+                'path',
+                InputArgument::OPTIONAL,
+                'The path of the directory'
+            )->addOption(
+                'name',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'The project name'
+            )->addOption(
+                'paths',
+                null,
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'Setup the selected path (e.g. --path "src:sources/")'
+            )->addOption(
+                'infos',
+                null,
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'Setup the selected info (e.g. --info "email:email@domain.tld")'
+            );
+    }
 
-	/**
-	 * @inheritdoc
-	 */
-	protected function initialize(InputInterface $input, OutputInterface $output)
-	{
-		try
-		{
-			$this->initIO($input, $output);
+    /**
+     * @inheritdoc
+     */
+    protected function initialize(InputInterface $input, OutputInterface $output)
+    {
+        try {
+            $this->initIO($input, $output);
 
-			$this->io->title('Init project');
+            $this->io->title('Init project');
 
-			$path = $input->getArgument('path');
+            $path = $input->getArgument('path');
 
-			if (!$path)
-			{
-				$path = $this->basePath;
-			}
+            if (!$path) {
+                $path = $this->basePath;
+            }
 
-			$path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+            $path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-			if (!is_dir($path))
-			{
-				throw new OutputException([
-					'This directory does not exists, please check',
-					$path
-				], 'error');
-			}
+            if (!is_dir($path)) {
+                throw new OutputException([
+                    'This directory does not exists, please check',
+                    $path
+                ], 'error');
+            }
 
-			if (file_exists($path . '.jbuilder'))
-			{
-				throw new OutputException([
-					'This directory has already been init',
-					$path
-				], 'warning');
-			}
+            if (file_exists($path . '.jbuilder')) {
+                throw new OutputException([
+                    'This directory has already been init',
+                    $path
+                ], 'warning');
+            }
 
-			$this->basePath = $path;
+            $this->basePath = $path;
 
-			$this->config = (object) [
-				'paths' => (object) [
-					'src'        => 'src/',
-					'components' => 'components/',
-					'libraries'  => 'libraries/',
-					'demo'       => 'demo/'
-				],
-				'infos' => (object) [
-					'author'      => 'me',
-					'email'       => 'me@domain.tld',
-					'url'         => 'http://www.domain.tld',
-					'copyright'   => 'Copyright (c) 2016 Me',
-					'license'     => 'GNU General Public License version 2 or later',
-					'description' => ''
-				]
-			];
+            // Note: JBuilder default
+            $this->config = (object) [
+                'paths' => (object) [
+                    'src'        => 'src/',
+                    'components' => 'components/',
+                    'libraries'  => 'libraries/',
+                    'demo'       => 'demo/'
+                ],
+                'infos' => (object) [
+                    'author'      => 'me',
+                    'email'       => 'me@domain.tld',
+                    'url'         => 'http://www.domain.tld',
+                    'copyright'   => 'Copyright (c) 2016 Me',
+                    'license'     => 'GNU General Public License version 2 or later',
+                    'description' => ''
+                ]
+            ];
 
-			if ($name = $input->getOption('name'))
-			{
-				$this->config->name = $name;
-			}
-		}
-		catch (OutputException $e)
-		{
-			$type = $e->getType();
+            if ($name = $input->getOption('name')) {
+                $this->config->name = $name;
+            }
 
-			$this->io->$type($e->getMessages());
+            if ($paths = $input->getOption('paths')) {
+                foreach ($paths as $path) {
+                    list($name, $value) = explode(':', $path, 2);
 
-			exit;
-		}
-		catch (\Exception $e)
-		{
-			$this->io->error($e->getMessage());
+                    if (!isset($value) || !isset($this->config->paths->$name)) {
+                        continue;
+                    }
 
-			exit;
-		}
-	}
+                    $this->config->paths->$name = $value;
+                }
+            }
 
-	/**
-	 * @@inheritdoc
-	 */
-	protected function interact(InputInterface $input, OutputInterface $output)
-	{
-		$this->io->section('Project configuration');
+            if ($infos = $input->getOption('infos')) {
+                foreach ($infos as $info) {
+                    list($name, $value) = explode(':', $info, 2);
 
-		$name = $this->io->ask('What is the package name?', 'myproject');
+                    if (!isset($value) || !isset($this->config->infos->$name)) {
+                        continue;
+                    }
 
-		$this->config->name = $name;
+                    $this->config->infos->$name = $value;
+                }
+            }
+        } catch (OutputException $e) {
+            $type = $e->getType();
 
-		if (!$this->io->confirm('Use the default structure?'))
-		{
-			$src = $this->io->ask('Define the sources directory', 'src');
-			$src = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+            $this->io->$type($e->getMessages());
 
-			$components = $this->io->ask('Define the components directory (relative to the sources directory)', 'components');
-			$components = rtrim($components, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+            exit;
+        } catch (\Exception $e) {
+            $this->io->error($e->getMessage());
 
-			$libraries = $this->io->ask('Define the libraries directory (relative to the sources directory)', 'libraries');
-			$libraries = rtrim($libraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+            exit;
+        }
+    }
 
-			$demo = $this->io->ask('Define the Joomla website directory', 'demo');
-			$demo = rtrim($demo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    /**
+     * @@inheritdoc
+     */
+    protected function interact(InputInterface $input, OutputInterface $output)
+    {
+        $this->io->section('Project configuration');
 
-			$this->io->comment([
-				'Sources    ' . $src,
-				'Components ' . $src . $components,
-				'Libraries  ' . $src . $libraries,
-				'Demo       ' . $demo
-			]);
+        $name = $this->io->ask('What is the package name?', 'myproject');
 
-			$this->config->paths = (object) [
-				'src'        => $src,
-				'components' => $components,
-				'libraries'  => $libraries,
-				'demo'       => $demo
-			];
-		}
+        $this->config->name = $name;
 
-		if (!$this->io->confirm('Use the default informations (author, copyright, etc)?'))
-		{
-			$author      = $this->io->ask('Define the author?', 'me');
-			$email       = $this->io->ask('Define the email?', 'me@domain.tld');
-			$url         = $this->io->ask('Define the website URL', 'http://www.domain.tld');
-			$copyright   = $this->io->ask('Define the copyright', 'Copyright (c) 2016 Me');
-			$license     = $this->io->ask('Define the license', 'GNU General Public License version 2 or later');
-			$description = $this->io->ask('Define the description', '');
+        if (!$this->io->confirm('Use the default structure?')) {
+            $src = $this->io->ask('Define the sources directory', 'src');
+            $src = rtrim($src, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-			$this->config->infos = [
-				'author'      => $author,
-				'email'       => $email,
-				'url'         => $url,
-				'copyright'   => $copyright,
-				'license'     => $license,
-				'description' => $description
-			];
-		}
+            $components = $this->io->ask(
+                'Define the components directory (relative to the sources directory)',
+                'components'
+            );
+            $components = rtrim($components, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-		$this->ignoreDemo = $this->io->confirm('Add the demo in .gitignore?');
-	}
+            $libraries = $this->io->ask(
+                'Define the libraries directory (relative to the sources directory)',
+                'libraries'
+            );
+            $libraries = rtrim($libraries, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-	/**
-	 * @@inheritdoc
-	 */
-	protected function execute(InputInterface $input, OutputInterface $output)
-	{
-		try
-		{
-			$this->io->section('Project creation');
+            $demo = $this->io->ask('Define the Joomla website directory', 'demo');
+            $demo = rtrim($demo, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-			if (empty($this->config->name))
-			{
-				throw new OutputException([
-					'Action canceled, enter a name for this project'
-				], 'warning');
-			}
+            $this->io->comment([
+                'Sources    ' . $src,
+                'Components ' . $src . $components,
+                'Libraries  ' . $src . $libraries,
+                'Demo       ' . $demo
+            ]);
 
-			$path = $this->basePath;
+            $this->config->paths = (object) [
+                'src'        => $src,
+                'components' => $components,
+                'libraries'  => $libraries,
+                'demo'       => $demo
+            ];
+        }
 
-			$mkPaths = [
-				$path . $this->config->paths->src,
-				$path . $this->config->paths->src . $this->config->paths->components,
-				$path . $this->config->paths->src . $this->config->paths->libraries,
-				$path . $this->config->paths->demo
-			];
+        if (!$this->io->confirm('Use the default informations (author, copyright, etc)?')) {
+            $author      = $this->io->ask('Define the author?', 'me');
+            $email       = $this->io->ask('Define the email?', 'me@domain.tld');
+            $url         = $this->io->ask('Define the website URL', 'http://www.domain.tld');
+            $copyright   = $this->io->ask('Define the copyright', 'Copyright (c) 2016 Me');
+            $license     = $this->io->ask('Define the license', 'GNU General Public License version 2 or later');
+            $description = $this->io->ask('Define the description', '');
 
-			foreach ($mkPaths as $mkPath)
-			{
-				if (is_dir($mkPath))
-				{
-					$skips[] = $mkPath;
-				}
-				elseif (!@mkdir($mkPath))
-				{
-					throw new OutputException([
-						'Something wrong happened during the creation po the directory',
-						$mkPath
-					], 'error');
-				}
-			}
+            $this->config->infos = [
+                'author'      => $author,
+                'email'       => $email,
+                'url'         => $url,
+                'copyright'   => $copyright,
+                'license'     => $license,
+                'description' => $description
+            ];
+        }
 
-			if (isset($skips))
-			{
-				$this->io->note(
-					array_merge(['Skip directory creation, those directories already exists'], $skips)
-				);
-			}
+        $this->ignoreDemo = $this->io->confirm('Add the demo in .gitignore?');
+    }
 
-			if (!@touch($path . 'README.md'))
-			{
-				$this->io->warning([
-					'The README.md could not be created',
-					$path . 'README.md'
-				]);
-			}
+    /**
+     * @@inheritdoc
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+        try {
+            $this->io->section('Project creation');
 
-			if ($this->ignoreDemo
-				&& !@file_put_contents($path . '.gitignore', $this->config->paths->demo))
-			{
-				$this->io->warning([
-					'The .gitignore could not be created',
-					$path . 'README.md'
-				]);
-			}
+            if (empty($this->config->name)) {
+                throw new OutputException([
+                    'Action canceled, enter a name for this project'
+                ], 'warning');
+            }
 
-			if (!@file_put_contents($path . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT)))
-			{
-				throw new OutputException([
-					'Action canceled, the builder file cannot be created, please check.',
-					$path . '.jbuilder'
-				], 'error');
-			}
+            $path = $this->basePath;
 
-			$this->createPackageXml();
-		}
-		catch (OutputException $e)
-		{
-			$type = $e->getType();
+            $mkPaths = [
+                $path . $this->config->paths->src,
+                $path . $this->config->paths->src . $this->config->paths->components,
+                $path . $this->config->paths->src . $this->config->paths->libraries,
+                $path . $this->config->paths->demo
+            ];
 
-			$this->io->$type($e->getMessages());
+            foreach ($mkPaths as $mkPath) {
+                if (is_dir($mkPath)) {
+                    $skips[] = $mkPath;
+                } elseif (!@mkdir($mkPath)) {
+                    throw new OutputException([
+                        'Something wrong happened during the creation po the directory',
+                        $mkPath
+                    ], 'error');
+                }
+            }
 
-			exit;
-		}
-		catch (\Exception $e)
-		{
-			$this->io->error($e->getMessage());
+            if (isset($skips)) {
+                $this->io->note(
+                    array_merge(['Skip directory creation, those directories already exists'], $skips)
+                );
+            }
 
-			exit;
-		}
-	}
+            if (!@touch($path . 'README.md')) {
+                $this->io->warning([
+                    'The README.md could not be created',
+                    $path . 'README.md'
+                ]);
+            }
 
-	public function createPackageXml()
-	{
-		$xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><extension></extension>');
+            if ($this->ignoreDemo
+                && !@file_put_contents($path . '.gitignore', $this->config->paths->demo)) {
+                $this->io->warning([
+                    'The .gitignore could not be created',
+                    $path . 'README.md'
+                ]);
+            }
 
-		$xml->addAttribute('type', 'package');
-		$xml->addAttribute('version', '3.3.6');
-		$xml->addAttribute('method', 'upgrade');
+            if (!@file_put_contents($path . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT))) {
+                throw new OutputException([
+                    'Action canceled, the builder file cannot be created, please check.',
+                    $path . '.jbuilder'
+                ], 'error');
+            }
 
-		$xml->addChild('name', $this->config->name);
-		$xml->addChild('author', $this->config->infos->author);
-		$xml->addChild('creationDate', date('Y-m-d'));
-		$xml->addChild('packagename', $this->config->name);
-		$xml->addChild('version', '0.0.1');
-		$xml->addChild('url', $this->config->infos->url);
-		$xml->addChild('description', $this->config->infos->description);
+            $this->createPackageXml();
+        } catch (OutputException $e) {
+            $type = $e->getType();
 
-		$fof = $xml
-			->addChild('files')
-				->addChild('folder', $this->config->paths->libraries . 'fof');
+            $this->io->$type($e->getMessages());
 
-		$fof->addAttribute('type', 'library');
-		$fof->addAttribute('id', 'fof30');
+            exit;
+        } catch (\Exception $e) {
+            $this->io->error($e->getMessage());
 
-		$this->saveXML($xml->asXML(), $this->basePath . $this->config->paths->src . 'pkg_' . $this->config->name . '.xml');
-	}
+            exit;
+        }
+    }
+
+    public function createPackageXml()
+    {
+        $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><extension></extension>');
+
+        $xml->addAttribute('type', 'package');
+        $xml->addAttribute('version', '3.3.6');
+        $xml->addAttribute('method', 'upgrade');
+
+        $xml->addChild('name', $this->config->name);
+        $xml->addChild('author', $this->config->infos->author);
+        $xml->addChild('creationDate', date('Y-m-d'));
+        $xml->addChild('packagename', $this->config->name);
+        $xml->addChild('version', '0.0.1');
+        $xml->addChild('url', $this->config->infos->url);
+        $xml->addChild('description', $this->config->infos->description);
+
+        $fof = $xml
+            ->addChild('files')
+            ->addChild('folder', $this->config->paths->libraries . 'fof');
+
+        $fof->addAttribute('type', 'library');
+        $fof->addAttribute('id', 'fof30');
+
+        $this->saveXML(
+            $xml->asXML(),
+            $this->basePath . $this->config->paths->src . 'pkg_' . $this->config->name . '.xml'
+        );
+    }
 }

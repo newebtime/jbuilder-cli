@@ -188,7 +188,49 @@ class Entity extends AbstractComponent
 			}
 			elseif ('builder' == $type)
 			{
-				//TODO: Builder : Load the table builder
+                $idFieldName = $this->component->name . '_' . $viewSingular . '_id';
+
+                $xml = new \SimpleXMLElement('<xml></xml>');
+
+                $database = $xml->addChild('database');
+
+                $table = $database->addChild('table_structure');
+                $table->addAttribute('name', $tableName);
+
+                $field = $table->addChild('field');
+                $field->addAttribute('Field', $idFieldName);
+                $field->addAttribute('Type', 'INT(11) UNSIGNED');
+                $field->addAttribute('Null', 'NO');
+                $field->addAttribute('Extra', 'AUTO_INCREMENT');
+
+                while ('yes' == $this->io->choice('Do you want to create a new field?',['yes', 'no'], 'yes')) {
+                    $field = $table->addChild('field');
+
+                    $field->addAttribute('Field', $this->io->ask('Please enter the field name'));
+
+                    $types = $this->io->choice('Please select the field name', ['INT(11)', 'VARCHAR(255)', 'TEXT', 'DATE', 'OTHER'], 'VARCHAR(255)');
+
+                    if ($types == 'OTHER') {
+                        $field->addAttribute('Type', $this->io->ask('Please enter the field type'));
+                    }
+                    else {
+                        $field->addAttribute('Type', $types);
+                    }
+
+                    $field->addAttribute('Null', $this->io->choice('Field Null?', ['yes', 'no'], 'no'));
+                }
+
+                $key = $table->addChild('key');
+                $key->addAttribute('Key_name', 'PRIMARY');
+                $key->addAttribute('Column_name', $idFieldName);
+
+                $importer = new \JDatabaseImporterMysqli();
+                $importer->setDbo(\JFactory::getDbo());
+
+                $importer->from($xml)->mergeStructure();
+
+                //TODO: Save the XML?
+                //TODO: Create a .sql file?
 			}
 			else
 			{

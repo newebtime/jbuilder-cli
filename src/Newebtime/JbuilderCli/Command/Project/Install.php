@@ -128,8 +128,8 @@ class Install extends BaseCommand
 
 		$arguments = [
 			'site:install',
-			'site'          => $this->config->paths->demo,
-			'--www'         => $this->basePath,
+			'site'          => rtrim($this->config->paths->demo, "/"),
+			'--www'         => rtrim($this->basePath, "/"),
 			'--sample-data' => 'default',
 			'--interactive' => true,
 		];

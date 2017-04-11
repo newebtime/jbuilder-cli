@@ -221,7 +221,7 @@ class Install extends BaseCommand
 		$target = $destPath . '/fof';
 		$link   = $this->basePath . '/' . $this->config->paths->demo . 'libraries/fof30';
 
-		if (@symlink($target, $link))
+		if (@!symlink($target, $link))
 		{
 			$this->io->warning('Section [FOF] aborted, impossible to link the library directory');
 
@@ -231,7 +231,7 @@ class Install extends BaseCommand
 		$target = $destPath . '/fof/lib_fof30.xml';
 		$link   = $this->basePath . '/' . $this->config->paths->demo . 'administrator/manifests/libraries/lib_fof30.xml';
 
-		if (@symlink($target, $link))
+		if (@!symlink($target, $link))
 		{
 			$this->io->warning('Section [FOF] aborted, impossible to link the library XML file');
 
@@ -265,7 +265,7 @@ class Install extends BaseCommand
 		$target = $this->basePath . '/' . $this->config->paths->src . '/pkg_' . $this->config->name . '.xml';
 		$link   = $this->basePath . '/' . $this->config->paths->demo . 'administrator/manifests/packages/pkg_' . $this->config->name . '.xml';
 
-		if (@symlink($target, $link))
+		if (@!symlink($target, $link))
 		{
 			$this->io->warning('Section [Package] aborted, impossible to link the package XML file');
 

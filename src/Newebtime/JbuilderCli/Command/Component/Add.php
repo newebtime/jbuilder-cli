@@ -191,9 +191,11 @@ class Add extends AbstractComponent
 				$from = $ln['from'];
 				$to   = $ln['to'];
 
-				if (!@symlink($to, $from))
+				if (@!symlink($from, $to))
 				{
-					//TODO: Check
+                    $this->io->warning('Section [demo] aborted, impossible to link the library directory');
+
+                    return;
 				}
 			}
 

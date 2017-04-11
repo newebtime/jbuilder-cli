@@ -95,7 +95,21 @@ class Add extends AbstractComponent
 
         //TODO well we need first to ask the default one in the project?
         if (!$this->io->confirm('Use the default informations (author, copyright, etc)?')) {
+            $author      = $this->io->ask('Define the author?', 'me');
+            $email       = $this->io->ask('Define the email?', 'me@domain.tld');
+            $url         = $this->io->ask('Define the website URL', 'http://www.domain.tld');
+            $copyright   = $this->io->ask('Define the copyright', 'Copyright (c) 2016 Me');
+            $license     = $this->io->ask('Define the license', 'GNU General Public License version 2 or later');
+            $version     = $this->io->ask('Define the version', '0.0.1');
 
+            $this->config->infos = [
+                'author'      => $author,
+                'email'       => $email,
+                'url'         => $url,
+                'copyright'   => $copyright,
+                'license'     => $license,
+                'version'     => $version
+            ];
         }
     }
 
@@ -366,12 +380,12 @@ class Add extends AbstractComponent
 
         $xml->addChild('name', $this->component->comName);
         $xml->addChild('creationDate', date('Y-m-d'));
-        $xml->addChild('author', 'author'); //TODO
-        $xml->addChild('authorEmail', 'author@domain.tld'); //TODO
-        $xml->addChild('authorUrl', 'http://www.domain.tld'); //TODO
-        $xml->addChild('copyright', 'Copyright (c) 2016 MySelf'); //TODO
-        $xml->addChild('license', 'GNU General Public License version 2 or later'); //TODO
-        $xml->addChild('version', '0.0.1'); //TODO
+        $xml->addChild('author', $this->config->infos->author); //TODO
+        $xml->addChild('authorEmail', $this->config->infos->email); //TODO
+        $xml->addChild('authorUrl', $this->config->infos->url); //TODO
+        $xml->addChild('copyright', $this->config->infos->copyright); //TODO
+        $xml->addChild('license', $this->config->infos->license); //TODO
+        $xml->addChild('version', $this->config->infos->version); //TODO
         $xml->addChild('description', strtoupper($this->component->comName) . '_XML_DESCRIPTION');
 
         if (file_exists($path . 'script.' . $this->component->comName . '.php')) {

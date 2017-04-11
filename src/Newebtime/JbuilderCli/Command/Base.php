@@ -14,99 +14,98 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 class Base extends Command
 {
-	/**
-	 * Reference to the SymfonyStyle object
-	 *
-	 * @var SymfonyStyle
-	 */
-	protected $io;
+    /**
+     * Reference to the SymfonyStyle object
+     *
+     * @var SymfonyStyle
+     */
+    protected $io;
 
-	protected $config;
+    protected $config;
 
-	protected $basePath;
+    protected $basePath;
 
-	/**
-	 * @inheritdoc
-	 */
-	public function __construct($name = null)
-	{
-		parent::__construct($name);
+    /**
+     * @inheritdoc
+     */
+    public function __construct($name = null)
+    {
+        parent::__construct($name);
 
-		$path = getcwd();
-		$path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        $path = getcwd();
+        $path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-		$this->basePath = $path;
+        $this->basePath = $path;
 
-		$this->initConfig();
-	}
+        $this->initConfig();
+    }
 
-	public function initConfig()
-	{
-		$configPath = $this->basePath . '.jbuilder';
+    public function initConfig()
+    {
+        $configPath = $this->basePath . '.jbuilder';
 
-		if (file_exists($configPath))
-		{
-			$this->config = json_decode(file_get_contents($configPath));
-		}
+        if (file_exists($configPath)) {
+            $this->config = json_decode(file_get_contents($configPath));
+        }
 
-		return $this;
-	}
+        return $this;
+    }
 
-	protected function initIO(InputInterface $input, OutputInterface $output)
-	{
-		if (!isset($this->io))
-		{
-			$this->io = new SymfonyStyle($input, $output);
-		}
-	}
+    protected function initIO(InputInterface $input, OutputInterface $output)
+    {
+        if (!isset($this->io)) {
+            $this->io = new SymfonyStyle($input, $output);
+        }
+    }
 
-	/**
-	 * Save a XML using DOMDocument to format output
-	 *
-	 * @param string $xml       The XML to save
-	 * @param string $filePath  The path of the file
-	 *
-	 * @return bool
-	 */
-	protected function saveXML($xml, $filePath)
-	{
-		$domDocument = new \DOMDocument('1.0');
-		$domDocument->loadXML($xml);
-		$domDocument->preserveWhiteSpace = false;
-		$domDocument->formatOutput = true;
-		$xml = $domDocument->saveXML();
+    /**
+     * Save a XML using DOMDocument to format output
+     *
+     * @param string $xml      The XML to save
+     * @param string $filePath The path of the file
+     *
+     * @return bool
+     */
+    protected function saveXML($xml, $filePath)
+    {
+        $domDocument = new \DOMDocument('1.0');
+        $domDocument->loadXML($xml);
+        $domDocument->preserveWhiteSpace = false;
+        $domDocument->formatOutput       = true;
+        $xml                             = $domDocument->saveXML();
 
-		if (!@file_put_contents($filePath, $xml))
-		{
-			$this->io->warning([
-				'The XML file could not be created, please check',
-				$filePath
-			]);
+        if (!@file_put_contents($filePath, $xml)) {
+            $this->io->warning(
+                [
+                    'The XML file could not be created, please check',
+                    $filePath
+                ]
+            );
 
-			return false;
-		}
+            return false;
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	/**
-	 * Detect if git is installed
-	 * http://zurb.com/forrst/posts/Check_if_Git_is_installed_from_PHP-0E2
-	 *
-	 * @return bool|string
-	 */
-	protected function hasGit()
-	{
-		@exec('which git', $output);
+    /**
+     * Detect if git is installed
+     * http://zurb.com/forrst/posts/Check_if_Git_is_installed_from_PHP-0E2
+     *
+     * @return bool|string
+     */
+    protected function hasGit()
+    {
+        @exec('which git', $output);
 
-		$git = file_exists($line = trim(current($output))) ? $line : 'git';
+        $git = file_exists($line = trim(current($output))) ? $line : 'git';
 
-		unset($output);
+        unset($output);
 
-		@exec($git . ' --version', $output);
+        @exec($git . ' --version', $output);
 
-		preg_match('#^(git version)#', current($output), $matches);
+        preg_match('#^(git version)#', current($output), $matches);
 
-		return ! empty($matches[0]) ? $git : false;
-	}
+        return !empty($matches[0]) ? $git : false;
+    }
 }

@@ -15,6 +15,7 @@ class Entity extends AbstractComponent
 {
     protected $entity;
 
+    /** @var  \FOF30\Container\Container */
     protected $container;
 
     /**

@@ -31,6 +31,7 @@ class Install extends BaseCommand
             ->setName('project:install')
             ->setDescription('Download and install the dependency for the project (Joomla, FOF, package)');
     }
+
     /**
      * @inheritdoc
      */

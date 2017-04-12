@@ -54,6 +54,27 @@ class Init extends BaseCommand
      */
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
+        // [Default]
+        $this->config = (object) [
+            'paths' => (object) [
+                'src'        => 'src/',
+                'components' => 'components/',
+                'libraries'  => 'libraries/',
+                'demo'       => 'demo/'
+            ],
+            'infos' => (object) [
+                'author'      => 'me',
+                'email'       => 'me@domain.tld',
+                'url'         => 'http://www.domain.tld',
+                'copyright'   => 'Copyright (c) 2016 Me',
+                'license'     => 'GNU General Public License version 2 or later',
+                'description' => ''
+            ]
+        ];
+
+        $this->ignoreDemo = true;
+        // [/Default]
+
         try {
             $this->initIO($input, $output);
 
@@ -82,24 +103,6 @@ class Init extends BaseCommand
             }
 
             $this->basePath = $path;
-
-            // Note: JBuilder default
-            $this->config = (object) [
-                'paths' => (object) [
-                    'src'        => 'src/',
-                    'components' => 'components/',
-                    'libraries'  => 'libraries/',
-                    'demo'       => 'demo/'
-                ],
-                'infos' => (object) [
-                    'author'      => 'me',
-                    'email'       => 'me@domain.tld',
-                    'url'         => 'http://www.domain.tld',
-                    'copyright'   => 'Copyright (c) 2016 Me',
-                    'license'     => 'GNU General Public License version 2 or later',
-                    'description' => ''
-                ]
-            ];
 
             if ($name = $input->getOption('name')) {
                 $this->config->name = $name;
@@ -148,7 +151,7 @@ class Init extends BaseCommand
     {
         $this->io->section('Project configuration');
 
-        $name = $this->io->ask('What is the package name?', 'myproject');
+        $name = $this->io->ask('What is the package name?', $this->config->name);
 
         $this->config->name = $name;
 
@@ -187,12 +190,12 @@ class Init extends BaseCommand
         }
 
         if (!$this->io->confirm('Use the default informations (author, copyright, etc)?')) {
-            $author      = $this->io->ask('Define the author?', 'me');
-            $email       = $this->io->ask('Define the email?', 'me@domain.tld');
-            $url         = $this->io->ask('Define the website URL', 'http://www.domain.tld');
-            $copyright   = $this->io->ask('Define the copyright', 'Copyright (c) 2016 Me');
-            $license     = $this->io->ask('Define the license', 'GNU General Public License version 2 or later');
-            $description = $this->io->ask('Define the description', '');
+            $author      = $this->io->ask('Define the author?', $this->config->infos->author);
+            $email       = $this->io->ask('Define the email?', $this->config->infos->email);
+            $url         = $this->io->ask('Define the website URL', $this->config->infos->url);
+            $copyright   = $this->io->ask('Define the copyright', $this->config->infos->copyright);
+            $license     = $this->io->ask('Define the license', $this->config->infos->licence);
+            $description = $this->io->ask('Define the description', $this->config->infos->description);
 
             $this->config->infos = [
                 'author'      => $author,

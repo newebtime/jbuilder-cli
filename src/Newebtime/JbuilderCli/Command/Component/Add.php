@@ -464,11 +464,11 @@ class Add extends AbstractComponent
     {
         $srcBase = $this->basePath . $this->config->paths->src;
 
-        $xml = new \SimpleXMLElement($srcBase.'pkg_todo.xml', 0, true);
+        $xml = new \SimpleXMLElement($srcBase.'pkg_'.$this->config->name.'.xml', 0, true);
 
         $files = $xml->xpath('/extension/files')[0];
 
-        $folder = $files->addChild('folder', 'components/'.$this->component->comName);
+        $folder = $files->addChild('folder', $this->config->paths->components.$this->component->comName);
         $folder->addAttribute('type', 'component');
         $folder->addAttribute('id', $this->component->comName);
 

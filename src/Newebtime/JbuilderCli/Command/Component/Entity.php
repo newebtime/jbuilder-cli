@@ -194,6 +194,91 @@ class Entity extends AbstractComponent
                 $field->addAttribute('Null', 'NO');
                 $field->addAttribute('Extra', 'AUTO_INCREMENT');
 
+                while ('yes'== $this->io->choice('Do you want to create a new special field?',['yes', 'no'], 'yes')){
+
+                    $fieldType = $this->io->choice(
+                        'Please select the field type',
+                        ['Title & Slug', 'Published', 'Order', 'Author & Editor', 'Checkout', 'Asset', 'Access Level'],
+                        'Title & Slug'
+                    );
+
+                    if ($fieldType == 'Title & Slug') {
+                        $type1 = $this->io->choice('Please select the field type', ['Title', 'Slug'], 'Title');
+
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'title');
+                        $field->addAttribute('Type', 'VARCHAR(255)');
+                        $field->addAttribute('Null', 'NO');
+
+                        if ($type1 == 'Slug') {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'slug');
+                            $field->addAttribute('Type', 'VARCHAR(255)');
+                            $field->addAttribute('Null', 'YES');
+                        }
+                    }
+                    else if ($fieldType == 'Published') {
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'enabled');
+                        $field->addAttribute('Type', 'TINYINT(1)');
+                        $field->addAttribute('Null', 'No');
+                    }
+                    else if ($fieldType == 'Order') {
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'ordering');
+                        $field->addAttribute('Type', 'INT(11)');
+                        $field->addAttribute('Null', 'No');
+                    }
+                    else if ($fieldType == 'Author & Editor') {
+                        $type2 = $this->io->choice('Please select the field type', ['Author', 'Editor'], 'Author');
+
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'created_on');
+                        $field->addAttribute('Type', 'DATE');
+                        $field->addAttribute('Null', 'NO');
+
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'created_by');
+                        $field->addAttribute('Type', 'INT(11)');
+                        $field->addAttribute('Null', 'NO');
+
+                        if ($type2 == 'Editor') {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'modified_on');
+                            $field->addAttribute('Type', 'DATE');
+                            $field->addAttribute('Null', 'YES');
+
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'modified_by');
+                            $field->addAttribute('Type', 'INT(11)');
+                            $field->addAttribute('Null', 'YES');
+                        }
+                    }
+                    else if ($fieldType == 'Checkout') {
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'locked_by');
+                        $field->addAttribute('Type', 'INT(11)');
+                        $field->addAttribute('Null', 'YES');
+
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'locked_on');
+                        $field->addAttribute('Type', 'DATE');
+                        $field->addAttribute('Null', 'YES');
+                    }
+                    else if ($fieldType == 'Asset') {
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'asset_id');
+                        $field->addAttribute('Type', 'INT(11)');
+                        $field->addAttribute('Null', 'No');
+                    }
+                    else {
+                        $field = $table->addChild('field');
+                        $field->addAttribute('Field', 'access');
+                        $field->addAttribute('Type', 'INT(11)');
+                        $field->addAttribute('Null', 'No');
+                    }
+                }
+
                 while ('yes' == $this->io->choice('Do you want to create a new field?', ['yes', 'no'], 'yes')) {
                     $field = $table->addChild('field');
 

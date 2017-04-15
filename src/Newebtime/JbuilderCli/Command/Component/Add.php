@@ -495,12 +495,15 @@ class Add extends AbstractComponent
     public function updatePackageXml()
     {
         $srcBase = $this->basePath . $this->config->paths->src;
-        /**
-         * TODO: Update package XML file (pkg_name)
-         *      We should detect the folder
-         *
-         *      components/
-         *      libraries/
-         */
+
+        $xml = new \SimpleXMLElement($srcBase.'pkg_'.$this->config->name.'.xml', 0, true);
+
+        $files = $xml->xpath('/extension/files')[0];
+
+        $folder = $files->addChild('folder', $this->config->paths->components.$this->component->comName);
+        $folder->addAttribute('type', 'component');
+        $folder->addAttribute('id', $this->component->comName);
+
+        $this->saveXML($xml->asXML(), $srcBase .'pkg_'. $this->component->name . '.xml');
     }
 }

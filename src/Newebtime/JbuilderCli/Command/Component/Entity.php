@@ -123,9 +123,13 @@ class Entity extends AbstractComponent
                 ['none',    'No table, Model and Layouts will not be generated']
             ]);
 
-            $type = $this->io->choice('What table generator do you want to use for this entity?', ['default', 'builder', 'none'], 'default');
+            $type = $this->io->choice(
+                'What table generator do you want to use for this entity?',
+                ['default', 'builder', 'none'],
+                'default'
+            );
 
-            if ('default' == $type) {
+            if (in_array($type, ['default', 'builder'])) {
                 $idFieldName = $this->component->name . '_' . $viewSingular . '_id';
 
                 $xml = new \SimpleXMLElement('<xml></xml>');
@@ -141,109 +145,70 @@ class Entity extends AbstractComponent
                 $field->addAttribute('Null', 'NO');
                 $field->addAttribute('Extra', 'AUTO_INCREMENT');
 
-                $field = $table->addChild('field');
-                $field->addAttribute('Field', 'title');
-                $field->addAttribute('Type', 'VARCHAR(255)');
-                $field->addAttribute('Null', 'NO');
+                if ('default' == $type) {
+                    $field = $table->addChild('field');
+                    $field->addAttribute('Field', 'title');
+                    $field->addAttribute('Type', 'VARCHAR(255)');
+                    $field->addAttribute('Null', 'NO');
 
-                $field = $table->addChild('field');
-                $field->addAttribute('Field', 'created_on');
-                $field->addAttribute('Type', 'DATE');
-                $field->addAttribute('Null', 'NO');
+                    $field = $table->addChild('field');
+                    $field->addAttribute('Field', 'created_on');
+                    $field->addAttribute('Type', 'DATE');
+                    $field->addAttribute('Null', 'NO');
 
-                $field = $table->addChild('field');
-                $field->addAttribute('Field', 'created_by');
-                $field->addAttribute('Type', 'INT(11) UNSIGNED');
-                $field->addAttribute('Null', 'NO');
+                    $field = $table->addChild('field');
+                    $field->addAttribute('Field', 'created_by');
+                    $field->addAttribute('Type', 'INT(11) UNSIGNED');
+                    $field->addAttribute('Null', 'NO');
 
-                $field = $table->addChild('field');
-                $field->addAttribute('Field', 'modified_on');
-                $field->addAttribute('Type', 'DATE');
-                $field->addAttribute('Null', 'NO');
+                    $field = $table->addChild('field');
+                    $field->addAttribute('Field', 'modified_on');
+                    $field->addAttribute('Type', 'DATE');
+                    $field->addAttribute('Null', 'NO');
 
-                $field = $table->addChild('field');
-                $field->addAttribute('Field', 'modified_by');
-                $field->addAttribute('Type', 'INT(11) UNSIGNED');
-                $field->addAttribute('Null', 'NO');
+                    $field = $table->addChild('field');
+                    $field->addAttribute('Field', 'modified_by');
+                    $field->addAttribute('Type', 'INT(11) UNSIGNED');
+                    $field->addAttribute('Null', 'NO');
+                } elseif ('builder' == $type) {
+                    while ('yes' == $this->io->choice('Do you want to create a new special field?', ['yes', 'no'], 'yes')) {
+                        $fieldType = $this->io->choice(
+                            'Please select the field type',
+                            ['Title & Slug', 'Published', 'Order', 'Author & Editor', 'Checkout', 'Asset', 'Access Level'],
+                            'Title & Slug'
+                        );
 
-                $key = $table->addChild('key');
-                $key->addAttribute('Key_name', 'PRIMARY');
-                $key->addAttribute('Column_name', $idFieldName);
+                        if ($fieldType == 'Title & Slug') {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'title');
+                            $field->addAttribute('Type', 'VARCHAR(255)');
+                            $field->addAttribute('Null', 'NO');
 
-                // Force to MySQLi, PDO has no xmlToCreate()
-                // Joomla Bug: https://github.com/joomla/joomla-cms/issues/10527
-                $importer = new \JDatabaseImporterMysqli();
-                $importer->setDbo(\JFactory::getDbo());
-
-                $importer->from($xml)->mergeStructure();
-
-                //TODO: Save the XML?
-                //TODO: Create a .sql file?
-            } elseif ('builder' == $type) {
-                $idFieldName = $this->component->name . '_' . $viewSingular . '_id';
-
-                $xml = new \SimpleXMLElement('<xml></xml>');
-
-                $database = $xml->addChild('database');
-
-                $table = $database->addChild('table_structure');
-                $table->addAttribute('name', $tableName);
-
-                $field = $table->addChild('field');
-                $field->addAttribute('Field', $idFieldName);
-                $field->addAttribute('Type', 'INT(11) UNSIGNED');
-                $field->addAttribute('Null', 'NO');
-                $field->addAttribute('Extra', 'AUTO_INCREMENT');
-
-                while ('yes'== $this->io->choice('Do you want to create a new special field?',['yes', 'no'], 'yes')){
-
-                    $fieldType = $this->io->choice(
-                        'Please select the field type',
-                        ['Title & Slug', 'Published', 'Order', 'Author & Editor', 'Checkout', 'Asset', 'Access Level'],
-                        'Title & Slug'
-                    );
-
-                    if ($fieldType == 'Title & Slug') {
-                        $type1 = $this->io->choice('Please select the field type', ['Title', 'Slug'], 'Title');
-
-                        $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'title');
-                        $field->addAttribute('Type', 'VARCHAR(255)');
-                        $field->addAttribute('Null', 'NO');
-
-                        if ($type1 == 'Slug') {
                             $field = $table->addChild('field');
                             $field->addAttribute('Field', 'slug');
                             $field->addAttribute('Type', 'VARCHAR(255)');
                             $field->addAttribute('Null', 'YES');
-                        }
-                    }
-                    else if ($fieldType == 'Published') {
-                        $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'enabled');
-                        $field->addAttribute('Type', 'TINYINT(1)');
-                        $field->addAttribute('Null', 'No');
-                    }
-                    else if ($fieldType == 'Order') {
-                        $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'ordering');
-                        $field->addAttribute('Type', 'INT(11)');
-                        $field->addAttribute('Null', 'No');
-                    }
-                    else if ($fieldType == 'Author & Editor') {
-                        $type2 = $this->io->choice('Please select the field type', ['Author', 'Editor'], 'Author');
+                        } elseif ($fieldType == 'Published') {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'enabled');
+                            $field->addAttribute('Type', 'TINYINT(1)');
+                            $field->addAttribute('Null', 'No');
+                        } elseif ($fieldType == 'Order') {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'ordering');
+                            $field->addAttribute('Type', 'INT(11)');
+                            $field->addAttribute('Null', 'No');
+                        } elseif ($fieldType == 'Author & Editor') {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'created_on');
+                            $field->addAttribute('Type', 'DATE');
+                            $field->addAttribute('Null', 'NO');
 
-                        $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'created_on');
-                        $field->addAttribute('Type', 'DATE');
-                        $field->addAttribute('Null', 'NO');
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'created_by');
+                            $field->addAttribute('Type', 'INT(11)');
+                            $field->addAttribute('Null', 'NO');
 
-                        $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'created_by');
-                        $field->addAttribute('Type', 'INT(11)');
-                        $field->addAttribute('Null', 'NO');
-
-                        if ($type2 == 'Editor') {
                             $field = $table->addChild('field');
                             $field->addAttribute('Field', 'modified_on');
                             $field->addAttribute('Type', 'DATE');
@@ -253,53 +218,56 @@ class Entity extends AbstractComponent
                             $field->addAttribute('Field', 'modified_by');
                             $field->addAttribute('Type', 'INT(11)');
                             $field->addAttribute('Null', 'YES');
+                        } elseif ($fieldType == 'Checkout') {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'locked_by');
+                            $field->addAttribute('Type', 'INT(11)');
+                            $field->addAttribute('Null', 'YES');
+
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'locked_on');
+                            $field->addAttribute('Type', 'DATE');
+                            $field->addAttribute('Null', 'YES');
+                        } elseif ($fieldType == 'Asset') {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'asset_id');
+                            $field->addAttribute('Type', 'INT(11)');
+                            $field->addAttribute('Null', 'No');
+                        } else {
+                            $field = $table->addChild('field');
+                            $field->addAttribute('Field', 'access');
+                            $field->addAttribute('Type', 'INT(11)');
+                            $field->addAttribute('Null', 'No');
                         }
                     }
-                    else if ($fieldType == 'Checkout') {
+
+                    while ('yes' == $this->io->choice('Do you want to create a new field?', ['yes', 'no'], 'yes')) {
                         $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'locked_by');
-                        $field->addAttribute('Type', 'INT(11)');
-                        $field->addAttribute('Null', 'YES');
 
-                        $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'locked_on');
-                        $field->addAttribute('Type', 'DATE');
-                        $field->addAttribute('Null', 'YES');
+                        $field->addAttribute('Field', $this->io->ask('Please enter the field name'));
+
+                        $types = $this->io->choice(
+                            'Please select the field name',
+                            ['INT(11)', 'VARCHAR(255)', 'TEXT', 'DATE', 'OTHER'],
+                            'VARCHAR(255)'
+                        );
+
+                        if ($types == 'OTHER') {
+                            $field->addAttribute('Type', $this->io->ask('Please enter the field type'));
+                        } else {
+                            $field->addAttribute('Type', $types);
+                        }
+
+                        $field->addAttribute('Null', $this->io->choice('Field Null?', ['yes', 'no'], 'no'));
                     }
-                    else if ($fieldType == 'Asset') {
-                        $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'asset_id');
-                        $field->addAttribute('Type', 'INT(11)');
-                        $field->addAttribute('Null', 'No');
-                    }
-                    else {
-                        $field = $table->addChild('field');
-                        $field->addAttribute('Field', 'access');
-                        $field->addAttribute('Type', 'INT(11)');
-                        $field->addAttribute('Null', 'No');
-                    }
-                }
-
-                while ('yes' == $this->io->choice('Do you want to create a new field?', ['yes', 'no'], 'yes')) {
-                    $field = $table->addChild('field');
-
-                    $field->addAttribute('Field', $this->io->ask('Please enter the field name'));
-
-                    $types = $this->io->choice('Please select the field name', ['INT(11)', 'VARCHAR(255)', 'TEXT', 'DATE', 'OTHER'], 'VARCHAR(255)');
-
-                    if ($types == 'OTHER') {
-                        $field->addAttribute('Type', $this->io->ask('Please enter the field type'));
-                    } else {
-                        $field->addAttribute('Type', $types);
-                    }
-
-                    $field->addAttribute('Null', $this->io->choice('Field Null?', ['yes', 'no'], 'no'));
                 }
 
                 $key = $table->addChild('key');
                 $key->addAttribute('Key_name', 'PRIMARY');
                 $key->addAttribute('Column_name', $idFieldName);
 
+                // Force to MySQLi, PDO has no xmlToCreate()
+                // Joomla Bug: https://github.com/joomla/joomla-cms/issues/10527
                 $importer = new \JDatabaseImporterMysqli();
                 $importer->setDbo(\JFactory::getDbo());
 
@@ -359,7 +327,7 @@ class Entity extends AbstractComponent
             $scaffolding = new \FOF30\Factory\Scaffolding\Controller\Builder($this->container);
             $scaffolding->setSection($section);
 
-            if(!$scaffolding->make($classname, $view)) {
+            if (!$scaffolding->make($classname, $view)) {
                 $this->io->error('An error occurred while creating the Controller class');
 
                 exit;

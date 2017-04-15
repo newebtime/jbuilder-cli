@@ -11,6 +11,7 @@ use Joomlatools\Console\Command\Extension\Install as ExtensionInstall;
 
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class Add extends AbstractComponent
@@ -24,7 +25,13 @@ class Add extends AbstractComponent
 
         $this
             ->setName('component:add')
-            ->setDescription('Add a new component is the sources');
+            ->setDescription('Add a new component is the sources')
+            ->addOption(
+                'infos',
+                null,
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'Setup the selected info (e.g. --info "email:email@domain.tld")'
+            );
     }
 
     /**
@@ -63,6 +70,18 @@ class Add extends AbstractComponent
         ]);
 
         $this->component->path = $path;
+
+        if ($infos = $input->getOption('infos')) {
+            foreach ($infos as $info) {
+                list($name, $value) = explode(':', $info, 2);
+
+                if (!isset($value) || !isset($this->config->infos->$name)) {
+                    continue;
+                }
+
+                $this->config->infos->$name = $value;
+            }
+        }
     }
 
     /**
@@ -93,9 +112,22 @@ class Add extends AbstractComponent
             $this->component->paths = $paths;
         }
 
-        //TODO well we need first to ask the default one in the project?
         if (!$this->io->confirm('Use the default informations (author, copyright, etc)?')) {
+            $author      = $this->io->ask('Define the author?', $this->config->infos->author);
+            $email       = $this->io->ask('Define the email?', $this->config->infos->email);
+            $url         = $this->io->ask('Define the website URL', $this->config->infos->url);
+            $copyright   = $this->io->ask('Define the copyright', $this->config->infos->copyright);
+            $license     = $this->io->ask('Define the license', $this->config->infos->license);
+            $version     = $this->io->ask('Define the version', $this->config->infos->version);
 
+            $this->config->infos = [
+                'author'      => $author,
+                'email'       => $email,
+                'url'         => $url,
+                'copyright'   => $copyright,
+                'license'     => $license,
+                'version'     => $version
+            ];
         }
     }
 
@@ -366,12 +398,12 @@ class Add extends AbstractComponent
 
         $xml->addChild('name', $this->component->comName);
         $xml->addChild('creationDate', date('Y-m-d'));
-        $xml->addChild('author', 'author'); //TODO
-        $xml->addChild('authorEmail', 'author@domain.tld'); //TODO
-        $xml->addChild('authorUrl', 'http://www.domain.tld'); //TODO
-        $xml->addChild('copyright', 'Copyright (c) 2016 MySelf'); //TODO
-        $xml->addChild('license', 'GNU General Public License version 2 or later'); //TODO
-        $xml->addChild('version', '0.0.1'); //TODO
+        $xml->addChild('author', $this->config->infos->author);
+        $xml->addChild('authorEmail', $this->config->infos->email);
+        $xml->addChild('authorUrl', $this->config->infos->url);
+        $xml->addChild('copyright', $this->config->infos->copyright);
+        $xml->addChild('license', $this->config->infos->license);
+        $xml->addChild('version', $this->config->infos->version);
         $xml->addChild('description', strtoupper($this->component->comName) . '_XML_DESCRIPTION');
 
         if (file_exists($path . 'script.' . $this->component->comName . '.php')) {

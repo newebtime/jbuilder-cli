@@ -48,7 +48,7 @@ class Install extends BaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         try {
-            $this->installJoomla();
+            $this->installJoomla($input);
             $this->installFof();
             $this->installPackage();
 
@@ -66,7 +66,7 @@ class Install extends BaseCommand
         }
     }
 
-    public function installJoomla()
+    public function installJoomla(InputInterface $input)
     {
         $this->io->section('Joomla');
 
@@ -119,7 +119,7 @@ class Install extends BaseCommand
             'site'          => rtrim($this->config->paths->demo, "/"),
             '--www'         => rtrim($this->basePath, "/"),
             '--sample-data' => 'default',
-            '--interactive' => true,
+            '--interactive' => $input->isInteractive(),
         ];
 
         $command = new SiteInstall();

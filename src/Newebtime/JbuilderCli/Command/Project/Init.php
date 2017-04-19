@@ -19,6 +19,8 @@ class Init extends BaseCommand
 {
     protected $ignoreDemo;
 
+    protected $ignoreFof;
+
     /**
      * @@inheritdoc
      */
@@ -73,6 +75,7 @@ class Init extends BaseCommand
         ];
 
         $this->ignoreDemo = true;
+        $this->ignoreFof  = true;
         // [/Default]
 
         try {
@@ -208,6 +211,7 @@ class Init extends BaseCommand
         }
 
         $this->ignoreDemo = $this->io->confirm('Add the demo in .gitignore?');
+        $this->ignoreFof = $this->io->confirm('Add the fof30 in .gitignore?');
     }
 
     /**
@@ -258,7 +262,15 @@ class Init extends BaseCommand
             }
 
             if ($this->ignoreDemo
-                && !@file_put_contents($path . '.gitignore', $this->config->paths->demo)) {
+                && !@file_put_contents($path . '.gitignore', $this->config->paths->demo.PHP_EOL, FILE_APPEND)) {
+                $this->io->warning([
+                    'The .gitignore could not be created',
+                    $path . 'README.md'
+                ]);
+            }
+
+            if ($this->ignoreFof
+                && !@file_put_contents($path . '.gitignore', $this->config->paths->src . $this->config->paths->libraries . 'fof30', FILE_APPEND)) {
                 $this->io->warning([
                     'The .gitignore could not be created',
                     $path . 'README.md'

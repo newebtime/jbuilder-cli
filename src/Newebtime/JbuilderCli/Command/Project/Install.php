@@ -15,6 +15,7 @@ use Joomlatools\Console\Joomla\Bootstrapper;
 
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
@@ -29,7 +30,23 @@ class Install extends BaseCommand
     {
         $this
             ->setName('project:install')
-            ->setDescription('Download and install the dependency for the project (Joomla, FOF, package)');
+            ->setDescription('Download and install the dependency for the project (Joomla, FOF, package)')
+            ->addOption(
+                'skip-joomla',
+                null,
+                InputOption::VALUE_NONE,
+                'Skip to install joomla'
+            )->addOption(
+                'skip-fof',
+                null,
+                InputOption::VALUE_NONE,
+                'Skip to install fof'
+            )->addOption(
+                'skip-package',
+                null,
+                InputOption::VALUE_NONE,
+                'Skip to install package'
+            );
     }
 
     /**
@@ -48,9 +65,15 @@ class Install extends BaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         try {
-            $this->installJoomla($input);
-            $this->installFof();
-            $this->installPackage();
+            if (!$input->getOption('skip-joomla')){
+                $this->installJoomla($input);
+            }
+            if (!$input->getOption('skip-fof')){
+                $this->installFof();
+            }
+            if (!$input->getOption('skip-package')){
+                $this->installPackage();
+            }
 
             $this->io->success('Install command completed');
         } catch (OutputException $e) {
@@ -106,6 +129,7 @@ class Install extends BaseCommand
             'site:download',
             'site'      => $this->config->paths->demo,
             '--refresh' => true,
+            '--release' => 3.6, // Note: 3.7 crash
             '--www'     => $this->basePath,
         ];
 
@@ -135,7 +159,7 @@ class Install extends BaseCommand
 
         $this->io->note('Start downloading FOF');
 
-        $app = Bootstrapper::getApplication($this->basePath . '/' . $this->config->paths->demo);
+        $app = Bootstrapper::getApplication($this->basePath . $this->config->paths->demo);
 
         if ($this->hasGit()) {
             $versions = new Versions();
@@ -249,7 +273,64 @@ class Install extends BaseCommand
             return;
         }
 
-        //TODO: Detect and install all the other libraries and components if any
+        foreach ($this->config->components as $components) {
+            $componentName = $components->comName;
+
+            $lns = [
+                // Admin Folder
+                [
+                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->backend,
+                    'to' => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $componentName
+                ],
+                // Site Folder
+                [
+                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->frontend,
+                    'to' => $this->basePath . $this->config->paths->demo . 'components/' . $componentName
+                ],
+                // Media Folder
+                [
+                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->media,
+                    'to' => $this->basePath . $this->config->paths->demo . 'media/' . $componentName
+                ],
+                // Frontend Language file
+                [
+                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->language . 'frontend/en-GB/en-GB.' . $componentName . '.ini',
+                    'to' => $this->basePath . $this->config->paths->demo . 'administrator/language/en-GB/en-GB.' . $componentName . '.ini'
+                ],
+                // Backend Language file
+                [
+                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->language . 'backend/en-GB/en-GB.' . $componentName . '.ini',
+                    'to' => $this->basePath . $this->config->paths->demo . 'language/en-GB/en-GB.' . $componentName . '.ini'
+                ],
+                // XML
+                [
+                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->name . '.xml',
+                    'to' => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $componentName . '/' . $this->config->components->$componentName->name . '.xml'
+                ]
+            ];
+
+            foreach ($lns as $ln) {
+                $from = $ln['from'];
+                $to = $ln['to'];
+
+                if (@!symlink($from, $to)) {
+                    $this->io->warning(['Section [Package] aborted, impossible to link the directory', $from, $to]);
+
+                    return;
+                }
+            }
+
+            $arguments = new ArrayInput([
+                'extension:install',
+                'site' => $this->config->paths->demo,
+                'extension' => $componentName,
+                '--www' => $this->basePath
+            ]);
+
+            $command = new ExtensionInstall();
+            $command->run($arguments, $this->io);
+        }
+
         //TODO: Refresh Joomla and install pkg
 
         $this->io->success('Package completed');

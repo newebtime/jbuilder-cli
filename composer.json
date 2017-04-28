@@ -1,0 +1,20 @@
+{
+    "name": "newebtime/jbuilder-cli",
+    "description": "Joomla console for development",
+    "type": "project",
+    "license": "MPLv2",
+    "authors": [
+        {
+            "name": "Frédéric Vandebeuque",
+            "email": "fred.vdb@newebtime.com"
+        }
+    ],
+    "require": {
+        "symfony/console": "^2.8",
+        "joomlatools/console": "^1.4"
+    },
+    "autoload": {
+        "psr-0": {"Newebtime\\": "src/"}
+    },
+    "bin": ["bin/jbuilder"]
+}

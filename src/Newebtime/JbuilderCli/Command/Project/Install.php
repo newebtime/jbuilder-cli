@@ -15,6 +15,7 @@ use Joomlatools\Console\Joomla\Bootstrapper;
 
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
@@ -29,7 +30,25 @@ class Install extends BaseCommand
     {
         $this
             ->setName('project:install')
-            ->setDescription('Download and install the dependency for the project (Joomla, FOF, package)');
+            ->setDescription('Download and install the dependency for the project (Joomla, FOF, package)')
+            ->addOption(
+                'mysql-login',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'site:install mysql-login'
+            )
+            ->addOption(
+                'mysql-host',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'site:install mysql-host'
+            )
+            ->addOption(
+                'mysql-database',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'site:install mysql-database'
+            );
     }
 
     /**
@@ -121,6 +140,18 @@ class Install extends BaseCommand
             '--sample-data' => 'default',
             '--interactive' => $input->isInteractive(),
         ];
+
+        if ($input->getOption('mysql-login')) {
+            $arguments['--mysql-login'] = $input->getOption('mysql-login');
+        }
+
+        if ($input->getOption('mysql-host')) {
+            $arguments['--mysql-host'] = $input->getOption('mysql-host');
+        }
+
+        if ($input->getOption('mysql-database')) {
+            $arguments['--mysql-database'] = $input->getOption('mysql-database');
+        }
 
         $command = new SiteInstall();
         $command->setApplication($this->getApplication());

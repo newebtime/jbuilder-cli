@@ -14,6 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class Entity extends AbstractComponent
 {
     protected $entity;
+    protected $useEntity;
 
     /** @var  \FOF30\Container\Container */
     protected $container;
@@ -45,6 +46,11 @@ class Entity extends AbstractComponent
                 null,
                 InputOption::VALUE_NONE,
                 'Generate only the backend'
+            )->addOption(
+                'use',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'What table generator do you want to use for this entity? ([\'default\', \'builder\', \'none\'])'
             );
     }
 
@@ -54,6 +60,8 @@ class Entity extends AbstractComponent
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         parent::initialize($input, $output);
+
+        $this->useEntity = true;
 
         if (!@include_once JPATH_PLATFORM . '/fof30/include.php') {
             $this->io->warning('Action canceled, FOF could not be loaded');
@@ -117,17 +125,22 @@ class Entity extends AbstractComponent
         if (!$hasTable) {
             $this->io->note('No table found for this entity in the database');
 
-            $this->io->table(['type', 'description'], [
-                ['default', 'Fields: id, title, created_on, created_by, modified_on, modified_by'],
-                ['builder', 'Create the table using the CLI builder'],
-                ['none',    'No table, Model and Layouts will not be generated']
-            ]);
+            if ($this->useEntity = $input->getOption('use')) {
+                $type = $this->useEntity;
+            }
+            else {
+                $this->io->table(['type', 'description'], [
+                    ['default', 'Fields: id, title, created_on, created_by, modified_on, modified_by'],
+                    ['builder', 'Create the table using the CLI builder'],
+                    ['none', 'No table, Model and Layouts will not be generated']
+                ]);
 
-            $type = $this->io->choice(
-                'What table generator do you want to use for this entity?',
-                ['default', 'builder', 'none'],
-                'default'
-            );
+                $type = $this->io->choice(
+                    'What table generator do you want to use for this entity?',
+                    ['default', 'builder', 'none'],
+                    'default'
+                );
+            }
 
             if (in_array($type, ['default', 'builder'])) {
                 $idFieldName = $this->component->name . '_' . $viewSingular . '_id';

@@ -48,6 +48,11 @@ class Init extends BaseCommand
                 null,
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
                 'Setup the selected info (e.g. --info "email:email@domain.tld")'
+            )->addOption(
+                'git-demo',
+                true,
+                InputOption::VALUE_NONE,
+                'Add the demo to .gitignore'
             );
     }
 
@@ -134,6 +139,10 @@ class Init extends BaseCommand
                     $this->config->infos->$name = $value;
                 }
             }
+
+            if ($gitDemo = $input->getOption('git-demo')) {
+                $this->ignoreDemo = false;
+            }
         } catch (OutputException $e) {
             $type = $e->getType();
 
@@ -210,7 +219,10 @@ class Init extends BaseCommand
             ];
         }
 
-        $this->ignoreDemo = $this->io->confirm('Add the demo in .gitignore?');
+        if (!$input->getOption('git-demo')) {
+            $this->ignoreDemo = $this->io->confirm('Add the demo in .gitignore?');
+        }
+
         $this->ignoreFof = $this->io->confirm('Add the fof30 in .gitignore?');
     }
 

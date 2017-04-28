@@ -16,6 +16,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Add extends AbstractComponent
 {
+    protected $installDemo;
+
     /**
      * @@inheritdoc
      */
@@ -31,6 +33,16 @@ class Add extends AbstractComponent
                 null,
                 InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
                 'Setup the selected info (e.g. --info "email:email@domain.tld")'
+            )->addOption(
+                'paths',
+                null,
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'Setup the selected path'
+            )->addOption(
+                'no-link',
+                null,
+                InputOption::VALUE_NONE,
+                'Install the component on the demo'
             );
     }
 
@@ -44,6 +56,8 @@ class Add extends AbstractComponent
         \JLoader::import('joomla.filesystem.folder');
 
         $this->io->title('Add component');
+
+        $this->installDemo = true;
 
         $path = $this->basePath
             . $this->config->paths->src
@@ -81,6 +95,22 @@ class Add extends AbstractComponent
 
                 $this->config->infos->$name = $value;
             }
+        }
+
+        if ($paths = $input->getOption('paths')) {
+            foreach ($paths as $path) {
+                list($name, $value) = explode(':', $path, 2);
+
+                if (!isset($value) || !isset($this->component->paths->$name)) {
+                    continue;
+                }
+
+                $this->component->paths->$name = $value;
+            }
+        }
+
+        if ($noLink = $input->getOption('no-link')) {
+            $this->installDemo = false;
         }
     }
 
@@ -129,6 +159,11 @@ class Add extends AbstractComponent
                 'version'     => $version
             ];
         }
+
+        if (!$noLink = $input->getOption('no-link')) {
+            $this->installDemo = $this->io->confirm('Install the component on the demo?');
+        }
+
     }
 
     /**
@@ -182,7 +217,7 @@ class Add extends AbstractComponent
         $this->io->success('New component added');
 
         if ($input->isInteractive()
-            && $this->io->confirm('Install the component on the demo?')
+            && $this->installDemo
         ) {
             $lns = [
                 [

@@ -80,13 +80,13 @@ class Install extends BaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         try {
-            if (!$input->getOption('skip-joomla')){
+            if (!$input->getOption('skip-joomla')) {
                 $this->installJoomla($input);
             }
-            if (!$input->getOption('skip-fof')){
+            if (!$input->getOption('skip-fof')) {
                 $this->installFof();
             }
-            if (!$input->getOption('skip-package')){
+            if (!$input->getOption('skip-package')) {
                 $this->installPackage();
             }
 
@@ -109,6 +109,7 @@ class Install extends BaseCommand
         $this->io->section('Joomla');
 
         if (file_exists($this->basePath . $this->config->paths->demo . '/includes/defines.php')) {
+            // TODO: Should be in interact, add an option to replace
             if ('use' == $this->io->choice('Joomla already exists, do you want to use it?', ['use', 'delete'], 'use')) {
                 $this->io->note('Skipped Joomla installation');
 
@@ -198,6 +199,7 @@ class Install extends BaseCommand
         } else {
             $this->io->note('Git is not installed, impossible to detect the last version');
 
+            // TODO: Add an option to define the version
             $version = $this->io->ask('Which version of FOF do you wan to use?');
             $version = str_replace('.', '-', $version);
         }
@@ -231,6 +233,7 @@ class Install extends BaseCommand
         $destPath   = $this->basePath . '/' . $this->config->paths->src . $this->config->paths->libraries . 'fof30';
 
         if (is_dir($destPath)) {
+            // TODO: Add an option
             if ('delete' == $this->io->choice('FOF directoty detected in your libraries sources, use it?', ['use', 'delete'], 'delete')) {
                 \JFolder::delete($destPath);
             } else {
@@ -330,6 +333,8 @@ class Install extends BaseCommand
                     'to' => $this->basePath . $this->config->paths->demo . 'language/en-GB/en-GB.' . $componentName . '.ini'
                 ],
                 // XML
+                // TODO: Linking the XML inside the admin will also link it on the /src.
+                //  We better create a link from the src/admin to src/
                 [
                     'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->name . '.xml',
                     'to' => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $componentName . '/' . $this->config->components->$componentName->name . '.xml'
@@ -358,7 +363,7 @@ class Install extends BaseCommand
             $command->run($arguments, $this->io);
         }
 
-        //TODO: Refresh Joomla and install pkg
+        //TODO: Install pkg?
 
         $this->io->success('Package completed');
     }

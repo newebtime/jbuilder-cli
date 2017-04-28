@@ -73,12 +73,14 @@ class Entity extends AbstractComponent
 
         $name  = $input->getOption('name');
 
+        // TODO: Should be in interact
         if (!$name
             && $input->isInteractive()
         ) {
             $name = $this->io->ask('No entity name given, please enter the entity name (e.g. todos)');
         }
 
+        // TODO: Should be in execute
         if (preg_replace('/[^A-Z_]/i', '', $name) != $name
             || empty($name)
         ) {
@@ -113,6 +115,7 @@ class Entity extends AbstractComponent
 
             $this->io->caution('A database table already exist for this entity');
 
+            // TODO: add an option
             if ('use' == $this->io->choice('Do you want to use this table or delete it?', ['use', 'delete'], 'use')) {
                 $hasTable = 1;
             } else {
@@ -127,8 +130,7 @@ class Entity extends AbstractComponent
 
             if ($this->useEntity = $input->getOption('use')) {
                 $type = $this->useEntity;
-            }
-            else {
+            } else {
                 $this->io->table(['type', 'description'], [
                     ['default', 'Fields: id, title, created_on, created_by, modified_on, modified_by'],
                     ['builder', 'Create the table using the CLI builder'],

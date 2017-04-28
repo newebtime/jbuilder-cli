@@ -438,7 +438,7 @@ class Add extends AbstractComponent
         $xml->addChild('authorUrl', $this->config->infos->url);
         $xml->addChild('copyright', $this->config->infos->copyright);
         $xml->addChild('license', $this->config->infos->license);
-        $xml->addChild('version', $this->config->infos->version);
+        $xml->addChild('version', '1.0.0');
         $xml->addChild('description', strtoupper($this->component->comName) . '_XML_DESCRIPTION');
 
         if (file_exists($path . 'script.' . $this->component->comName . '.php')) {

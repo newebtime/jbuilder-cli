@@ -324,64 +324,66 @@ class Install extends BaseCommand
             return;
         }
 
-        foreach ($this->config->components as $components) {
-            $componentName = $components->comName;
+        if (isset($this->config->components)) {
+            foreach ($this->config->components as $components) {
+                $componentName = $components->comName;
 
-            $lns = [
-                // Admin Folder
-                [
-                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->backend,
-                    'to' => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $componentName
-                ],
-                // Site Folder
-                [
-                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->frontend,
-                    'to' => $this->basePath . $this->config->paths->demo . 'components/' . $componentName
-                ],
-                // Media Folder
-                [
-                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->media,
-                    'to' => $this->basePath . $this->config->paths->demo . 'media/' . $componentName
-                ],
-                // Frontend Language file
-                [
-                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->language . 'frontend/en-GB/en-GB.' . $componentName . '.ini',
-                    'to' => $this->basePath . $this->config->paths->demo . 'administrator/language/en-GB/en-GB.' . $componentName . '.ini'
-                ],
-                // Backend Language file
-                [
-                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->language . 'backend/en-GB/en-GB.' . $componentName . '.ini',
-                    'to' => $this->basePath . $this->config->paths->demo . 'language/en-GB/en-GB.' . $componentName . '.ini'
-                ],
-                // XML
-                // TODO: Linking the XML inside the admin will also link it on the /src.
-                //  We better create a link from the src/admin to src/
-                [
-                    'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->name . '.xml',
-                    'to' => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $componentName . '/' . $this->config->components->$componentName->name . '.xml'
-                ]
-            ];
+                $lns = [
+                    // Admin Folder
+                    [
+                        'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->backend,
+                        'to' => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $componentName
+                    ],
+                    // Site Folder
+                    [
+                        'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->frontend,
+                        'to' => $this->basePath . $this->config->paths->demo . 'components/' . $componentName
+                    ],
+                    // Media Folder
+                    [
+                        'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->media,
+                        'to' => $this->basePath . $this->config->paths->demo . 'media/' . $componentName
+                    ],
+                    // Frontend Language file
+                    [
+                        'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->language . 'frontend/en-GB/en-GB.' . $componentName . '.ini',
+                        'to' => $this->basePath . $this->config->paths->demo . 'administrator/language/en-GB/en-GB.' . $componentName . '.ini'
+                    ],
+                    // Backend Language file
+                    [
+                        'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->paths->language . 'backend/en-GB/en-GB.' . $componentName . '.ini',
+                        'to' => $this->basePath . $this->config->paths->demo . 'language/en-GB/en-GB.' . $componentName . '.ini'
+                    ],
+                    // XML
+                    // TODO: Linking the XML inside the admin will also link it on the /src.
+                    //  We better create a link from the src/admin to src/
+                    [
+                        'from' => $this->basePath . $this->config->paths->src . $this->config->paths->components . $componentName . '/' . $this->config->components->$componentName->name . '.xml',
+                        'to' => $this->basePath . $this->config->paths->demo . 'administrator/components/' . $componentName . '/' . $this->config->components->$componentName->name . '.xml'
+                    ]
+                ];
 
-            foreach ($lns as $ln) {
-                $from = $ln['from'];
-                $to = $ln['to'];
+                foreach ($lns as $ln) {
+                    $from = $ln['from'];
+                    $to = $ln['to'];
 
-                if (@!symlink($from, $to)) {
-                    $this->io->warning(['Section [Package] aborted, impossible to link the directory', $from, $to]);
+                    if (@!symlink($from, $to)) {
+                        $this->io->warning(['Section [Package] aborted, impossible to link the directory', $from, $to]);
 
-                    return;
+                        return;
+                    }
                 }
+
+                $arguments = new ArrayInput([
+                    'extension:install',
+                    'site' => $this->config->paths->demo,
+                    'extension' => $componentName,
+                    '--www' => $this->basePath
+                ]);
+
+                $command = new ExtensionInstall();
+                $command->run($arguments, $this->io);
             }
-
-            $arguments = new ArrayInput([
-                'extension:install',
-                'site' => $this->config->paths->demo,
-                'extension' => $componentName,
-                '--www' => $this->basePath
-            ]);
-
-            $command = new ExtensionInstall();
-            $command->run($arguments, $this->io);
         }
 
         //TODO: Install pkg?

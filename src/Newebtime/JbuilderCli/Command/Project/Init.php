@@ -52,7 +52,7 @@ class Init extends BaseCommand
                 'git-demo',
                 true,
                 InputOption::VALUE_NONE,
-                'Add the demo to .gitignore'
+                'Do not add demo website in .gitignore'
             );
     }
 
@@ -140,7 +140,7 @@ class Init extends BaseCommand
                 }
             }
 
-            if ($gitDemo = $input->getOption('git-demo')) {
+            if ($input->getOption('git-demo')) {
                 $this->ignoreDemo = false;
             }
         } catch (OutputException $e) {
@@ -163,7 +163,7 @@ class Init extends BaseCommand
     {
         $this->io->section('Project configuration');
 
-        $name = $this->io->ask('What is the package name?', $this->config->name);
+        $name = $this->io->ask('What is the package name?', isset($this->config->name) ? $this->config->name : 'myproject');
 
         $this->config->name = $name;
 

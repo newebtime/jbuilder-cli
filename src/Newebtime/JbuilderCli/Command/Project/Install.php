@@ -15,6 +15,7 @@ use Joomlatools\Console\Joomla\Bootstrapper;
 
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Newebtime\JbuilderCli\Command\Base as BaseCommand;
@@ -22,6 +23,7 @@ use Newebtime\JbuilderCli\Exception\OutputException;
 
 class Install extends BaseCommand
 {
+    protected $joomlaVersion;
     /**
      * @@inheritdoc
      */
@@ -29,7 +31,13 @@ class Install extends BaseCommand
     {
         $this
             ->setName('project:install')
-            ->setDescription('Download and install the dependency for the project (Joomla, FOF, package)');
+            ->setDescription('Download and install the dependency for the project (Joomla, FOF, package)')
+            ->addOption(
+                'joomla',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'The version of joomla (The version should not be less than to 3.4.2)'
+            );
     }
 
     /**
@@ -40,6 +48,8 @@ class Install extends BaseCommand
         $this->initIO($input, $output);
 
         $this->io->title('Install project');
+
+        $this->joomlaVersion = true;
     }
 
     /**
@@ -100,12 +110,27 @@ class Install extends BaseCommand
             $this->io->success('Deleting completed');
         }
 
+        if ($version = $input->getOption('joomla')) {
+            if ($version > '3.4.2'){
+                $this->joomlaVersion = $version;
+            }
+            else {
+                $this->io->warning('The joomla version is not compatible');
+
+                return;
+            }
+        }
+        elseif (!$input->getOption('joomla')) {
+            $this->joomlaVersion = '3.6';
+        }
+
         $this->io->note('Start downloading Joomla');
 
         $arguments = [
             'site:download',
             'site'      => $this->config->paths->demo,
             '--refresh' => true,
+            '--release' => $this->joomlaVersion,
             '--www'     => $this->basePath,
         ];
 

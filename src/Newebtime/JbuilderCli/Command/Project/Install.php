@@ -23,6 +23,8 @@ use Newebtime\JbuilderCli\Exception\OutputException;
 
 class Install extends BaseCommand
 {
+    protected $joomlaVersion;
+
     /**
      * @@inheritdoc
      */
@@ -61,6 +63,11 @@ class Install extends BaseCommand
                 null,
                 InputOption::VALUE_OPTIONAL,
                 'site:install mysql-database'
+            )->addOption(
+                'joomla',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'The version of joomla (The version should not be less than to 3.4.2)'
             );
     }
 
@@ -72,6 +79,8 @@ class Install extends BaseCommand
         $this->initIO($input, $output);
 
         $this->io->title('Install project');
+
+        $this->joomlaVersion = null;
     }
 
     /**
@@ -139,13 +148,25 @@ class Install extends BaseCommand
             $this->io->success('Deleting completed');
         }
 
+        if ($version = $input->getOption('joomla')) {
+            if ($version > '3.4.2'){
+                $this->joomlaVersion = $version;
+            } else {
+                $this->io->warning('The joomla version is not compatible');
+
+                return;
+            }
+        } elseif (!$input->getOption('joomla')) {
+            $this->joomlaVersion = '3.6';
+        }
+
         $this->io->note('Start downloading Joomla');
 
         $arguments = [
             'site:download',
             'site'      => $this->config->paths->demo,
             '--refresh' => true,
-            '--release' => 3.6, // Note: 3.7 crash
+            '--release' => $this->joomlaVersion,
             '--www'     => $this->basePath,
         ];
 

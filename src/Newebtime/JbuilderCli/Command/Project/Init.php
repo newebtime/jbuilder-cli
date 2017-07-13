@@ -1,7 +1,7 @@
 <?php
 /**
  * @package    JBuilderCli
- * @copyright  Copyright (c) 2003-2016 Frédéric Vandebeuque / Newebtime
+ * @copyright  Copyright (c) 2003-2017 Frédéric Vandebeuque / Newebtime
  * @license    Mozilla Public License, version 2.0
  */
 
@@ -73,7 +73,7 @@ class Init extends BaseCommand
                 'author'      => 'me',
                 'email'       => 'me@domain.tld',
                 'url'         => 'http://www.domain.tld',
-                'copyright'   => 'Copyright (c) 2016 Me',
+                'copyright'   => 'Copyright (c) 2017 Me',
                 'license'     => 'GNU General Public License version 2 or later',
                 'description' => ''
             ]

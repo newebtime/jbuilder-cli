@@ -1,7 +1,7 @@
 <?php
 /**
  * @package    JBuilderCli
- * @copyright  Copyright (c) 2003-2016 Frédéric Vandebeuque / Newebtime
+ * @copyright  Copyright (c) 2003-2017 Frédéric Vandebeuque / Newebtime
  * @license    Mozilla Public License, version 2.0
  */
 
@@ -17,7 +17,7 @@ class Application extends \Symfony\Component\Console\Application
      *
      * @var string
      */
-    const VERSION = '0.0.2';
+    const VERSION = '1.1.0';
 
     /**
      * Application name
@@ -43,9 +43,7 @@ class Application extends \Symfony\Component\Console\Application
     }
 
     /**
-     * Gets the default commands that should always be available.
-     *
-     * @return Command[] An array of default Command instances
+     * @inheritdoc
      */
     protected function getDefaultCommands()
     {

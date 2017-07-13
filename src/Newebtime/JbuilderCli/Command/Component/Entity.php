@@ -1,7 +1,7 @@
 <?php
 /**
  * @package    JBuilderCli
- * @copyright  Copyright (c) 2003-2016 Frédéric Vandebeuque / Newebtime
+ * @copyright  Copyright (c) 2003-2017 Frédéric Vandebeuque / Newebtime
  * @license    Mozilla Public License, version 2.0
  */
 
@@ -14,7 +14,18 @@ use Symfony\Component\Console\Output\OutputInterface;
 class Entity extends AbstractComponent
 {
     protected $entity;
-    protected $useEntity;
+
+    protected $type;
+
+    protected $tableName;
+
+    /** @var bool */
+    protected $hasTable = false;
+
+    /** @var bool */
+    protected $deleteTable = false;
+
+    protected $builderFields = [];
 
     /** @var  \FOF30\Container\Container */
     protected $container;
@@ -61,8 +72,6 @@ class Entity extends AbstractComponent
     {
         parent::initialize($input, $output);
 
-        $this->useEntity = true;
-
         if (!@include_once JPATH_PLATFORM . '/fof30/include.php') {
             $this->io->warning('Action canceled, FOF could not be loaded');
 
@@ -71,16 +80,15 @@ class Entity extends AbstractComponent
 
         $this->io->title('Generate new entity');
 
-        $name  = $input->getOption('name');
+        // [Name]
+        $name = $input->getOption('name');
 
-        // TODO: Should be in interact
         if (!$name
             && $input->isInteractive()
         ) {
             $name = $this->io->ask('No entity name given, please enter the entity name (e.g. todos)');
         }
 
-        // TODO: Should be in execute
         if (preg_replace('/[^A-Z_]/i', '', $name) != $name
             || empty($name)
         ) {
@@ -92,6 +100,33 @@ class Entity extends AbstractComponent
         //TODO: check plurial
 
         $this->entity = $name;
+        // [/Name]
+
+        // [Type]
+        $this->type = $input->getOption('use');
+
+        if ($this->type && !in_array($this->type, ['default', 'builder', 'none'])) {
+            $this->io->warning('Action canceled, --use only accept [\'default\', \'builder\', \'none\']');
+
+            exit;
+        }
+        // [/Type]
+
+        // [DB Table]
+        $inflector = new \FOF30\Inflector\Inflector();
+
+        $this->tableName = '#__' . $this->component->name . '_' . $inflector->pluralize($this->entity);
+
+        try {
+            \JFactory::getDbo()->getTableCreate($this->tableName);
+
+            $this->io->note('A database table already exist for this entity');
+
+            $this->hasTable = true;
+        } catch (\RuntimeException $e) {
+            $this->io->note('No table found for this entity in the database');
+        }
+        // [/DB Table]
     }
 
     /**
@@ -101,179 +136,217 @@ class Entity extends AbstractComponent
     {
         $this->io->section('Database table');
 
-        $hasTable = 0;
-
-        $inflector = new \FOF30\Inflector\Inflector();
-
-        $viewSingular = $inflector->singularize($this->entity);
-        $viewPlurial  = $inflector->pluralize($this->entity);
-
-        $tableName   = '#__' . $this->component->name . '_' . $viewPlurial;
-
-        try {
-            \JFactory::getDbo()->getTableCreate($tableName);
-
-            $this->io->caution('A database table already exist for this entity');
-
-            // TODO: add an option
-            if ('use' == $this->io->choice('Do you want to use this table or delete it?', ['use', 'delete'], 'use')) {
-                $hasTable = 1;
-            } else {
-                \JFactory::getDbo()->dropTable($tableName);
+        if ($this->hasTable) {
+            if ('delete' == $this->io->choice('Do you want to use this table or delete it?', ['use', 'delete'], 'use')) {
+                $this->deleteTable = true;
+                $this->hasTable    = false;
             }
-        } catch (\RuntimeException $e) {
-            //Nothing special
         }
 
-        if (!$hasTable) {
-            $this->io->note('No table found for this entity in the database');
-
-            if ($this->useEntity = $input->getOption('use')) {
-                $type = $this->useEntity;
-            } else {
+        if (!$this->hasTable) {
+            if (!$this->type) {
                 $this->io->table(['type', 'description'], [
                     ['default', 'Fields: id, title, created_on, created_by, modified_on, modified_by'],
                     ['builder', 'Create the table using the CLI builder'],
                     ['none', 'No table, Model and Layouts will not be generated']
                 ]);
 
-                $type = $this->io->choice(
+                $this->type = $this->io->choice(
                     'What table generator do you want to use for this entity?',
                     ['default', 'builder', 'none'],
                     'default'
                 );
             }
 
-            if (in_array($type, ['default', 'builder'])) {
+            if ('builder' == $this->type) {
+                $fields = [];
+
+                while ('Yes' == $this->io->choice('Do you want to create a new special field?', ['Yes', 'No'], 'Yes')) {
+                    $fieldType = $this->io->choice(
+                        'Please select the field type',
+                        ['Title & Slug', 'Published', 'Order', 'Author & Editor', 'Checkout', 'Asset', 'Access Level'],
+                        'Title & Slug'
+                    );
+
+                    if ($fieldType == 'Title & Slug') {
+                        $fields['title'] = [
+                            'Field' => 'title',
+                            'Type'  => 'VARCHAR(255)',
+                            'Null'  => 'NO'
+                        ];
+
+                        $fields['slug'] = [
+                            'Field' => 'slug',
+                            'Type'  => 'VARCHAR(255)',
+                            'Null'  => 'YES'
+                        ];
+                    } elseif ($fieldType == 'Published') {
+                        $fields['enabled'] = [
+                            'Field' => 'enabled',
+                            'Type'  => 'TINYINT(1)',
+                            'Null'  => 'No'
+                        ];
+                    } elseif ($fieldType == 'Order') {
+                        $fields['ordering'] = [
+                            'Field' => 'ordering',
+                            'Type'  => 'INT(11)',
+                            'Null'  => 'No'
+                        ];
+                    } elseif ($fieldType == 'Author & Editor') {
+                        $fields['created_on'] = [
+                            'Field' => 'created_on',
+                            'Type'  => 'DATE',
+                            'Null'  => 'NO'
+                        ];
+
+                        $fields['created_by'] = [
+                            'Field' => 'created_by',
+                            'Type'  => 'INT(11)',
+                            'Null'  => 'NO'
+                        ];
+
+                        $fields['modified_on'] = [
+                            'Field' => 'modified_on',
+                            'Type'  => 'DATE',
+                            'Null'  => 'YES'
+                        ];
+
+                        $fields['modified_by'] = [
+                            'Field' => 'modified_by',
+                            'Type'  => 'INT(11)',
+                            'Null'  => 'YES'
+                        ];
+                    } elseif ($fieldType == 'Checkout') {
+                        $fields['locked_by'] = [
+                            'Field' => 'locked_by',
+                            'Type'  => 'INT(11)',
+                            'Null'  => 'YES'
+                        ];
+
+                        $fields['locked_on'] = [
+                            'Field' => 'locked_on',
+                            'Type'  => 'DATE',
+                            'Null'  => 'YES'
+                        ];
+                    } elseif ($fieldType == 'Asset') {
+                        $fields['asset_id'] = [
+                            'Field' => 'asset_id',
+                            'Type'  => 'INT(11)',
+                            'Null'  => 'No'
+                        ];
+                    } else {
+                        $fields['access'] = [
+                            'Field' => 'access',
+                            'Type'  => 'INT(11)',
+                            'Null'  => 'No'
+                        ];
+                    }
+                }
+
+                while ('Yes' == $this->io->choice('Do you want to create a new field?', ['Yes', 'No'], 'Yes')) {
+                    $name = $this->io->ask('Please enter the field name');
+                    $type = $this->io->choice(
+                        'Please select the field name',
+                        ['INT(11)', 'VARCHAR(255)', 'TEXT', 'DATE', 'OTHER'],
+                        'VARCHAR(255)'
+                    );
+
+                    if ($type == 'OTHER') {
+                        $type = $this->io->ask('Please enter the field type');
+                    }
+
+                    $isNull = $this->io->choice('Field Null?', ['Yes', 'No'], 'No');
+
+                    $fields[$name] = [
+                        'Field' => $name,
+                        'Type'  => $type,
+                        'Null'  => $isNull
+                    ];
+                }
+
+                $this->builderFields = $fields;
+            }
+        }
+    }
+
+    /**
+     * @@inheritdoc
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
+    {
+        $sections = ['admin', 'site'];
+
+        if ($input->getOption('frontend')) {
+            $sections = ['site'];
+        } elseif ($input->getOption('backend')) {
+            $sections = ['admin'];
+        }
+
+        $inflector = new \FOF30\Inflector\Inflector();
+
+        $viewSingular = $inflector->singularize($this->entity);
+
+        if ($this->deleteTable) {
+            \JFactory::getDbo()->dropTable($this->tableName);
+        }
+
+        if (!$this->hasTable) {
+            if (in_array($this->type, ['default', 'builder'])) {
                 $idFieldName = $this->component->name . '_' . $viewSingular . '_id';
+
+                $fields = [
+                    $idFieldName => [
+                        'Field' => $idFieldName,
+                        'Type'  => 'INT(11) UNSIGNED',
+                        'Null'  => 'NO',
+                        'Extra' => 'AUTO_INCREMENT',
+                    ]
+                ];
+
+                if ('default' == $this->type) {
+                    $fields += [
+                        'title' => [
+                            'Field' => 'title',
+                            'Type'  => 'VARCHAR(255)',
+                            'Null'  => 'NO',
+                        ],
+                        'created_on' => [
+                            'Field' => 'created_on',
+                            'Type'  => 'DATE',
+                            'Null'  => 'NO',
+                        ],
+                        'created_by' => [
+                            'Field' => 'created_by',
+                            'Type'  => 'INT(11) UNSIGNED',
+                            'Null'  => 'NO',
+                        ],
+                        'modified_on' => [
+                            'Field' => 'modified_on',
+                            'Type'  => 'DATE',
+                            'Null'  => 'NO',
+                        ],
+                        'modified_by' => [
+                            'Field' => 'modified_by',
+                            'Type'  => 'INT(11) UNSIGNED',
+                            'Null'  => 'NO',
+                        ]
+                    ];
+                } else {
+                    $fields += $this->builderFields;
+                }
 
                 $xml = new \SimpleXMLElement('<xml></xml>');
 
                 $database = $xml->addChild('database');
 
                 $table = $database->addChild('table_structure');
-                $table->addAttribute('name', $tableName);
+                $table->addAttribute('name', $this->tableName);
 
-                $field = $table->addChild('field');
-                $field->addAttribute('Field', $idFieldName);
-                $field->addAttribute('Type', 'INT(11) UNSIGNED');
-                $field->addAttribute('Null', 'NO');
-                $field->addAttribute('Extra', 'AUTO_INCREMENT');
-
-                if ('default' == $type) {
+                foreach ($fields as $buildField) {
                     $field = $table->addChild('field');
-                    $field->addAttribute('Field', 'title');
-                    $field->addAttribute('Type', 'VARCHAR(255)');
-                    $field->addAttribute('Null', 'NO');
 
-                    $field = $table->addChild('field');
-                    $field->addAttribute('Field', 'created_on');
-                    $field->addAttribute('Type', 'DATE');
-                    $field->addAttribute('Null', 'NO');
-
-                    $field = $table->addChild('field');
-                    $field->addAttribute('Field', 'created_by');
-                    $field->addAttribute('Type', 'INT(11) UNSIGNED');
-                    $field->addAttribute('Null', 'NO');
-
-                    $field = $table->addChild('field');
-                    $field->addAttribute('Field', 'modified_on');
-                    $field->addAttribute('Type', 'DATE');
-                    $field->addAttribute('Null', 'NO');
-
-                    $field = $table->addChild('field');
-                    $field->addAttribute('Field', 'modified_by');
-                    $field->addAttribute('Type', 'INT(11) UNSIGNED');
-                    $field->addAttribute('Null', 'NO');
-                } elseif ('builder' == $type) {
-                    while ('yes' == $this->io->choice('Do you want to create a new special field?', ['yes', 'no'], 'yes')) {
-                        $fieldType = $this->io->choice(
-                            'Please select the field type',
-                            ['Title & Slug', 'Published', 'Order', 'Author & Editor', 'Checkout', 'Asset', 'Access Level'],
-                            'Title & Slug'
-                        );
-
-                        if ($fieldType == 'Title & Slug') {
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'title');
-                            $field->addAttribute('Type', 'VARCHAR(255)');
-                            $field->addAttribute('Null', 'NO');
-
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'slug');
-                            $field->addAttribute('Type', 'VARCHAR(255)');
-                            $field->addAttribute('Null', 'YES');
-                        } elseif ($fieldType == 'Published') {
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'enabled');
-                            $field->addAttribute('Type', 'TINYINT(1)');
-                            $field->addAttribute('Null', 'No');
-                        } elseif ($fieldType == 'Order') {
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'ordering');
-                            $field->addAttribute('Type', 'INT(11)');
-                            $field->addAttribute('Null', 'No');
-                        } elseif ($fieldType == 'Author & Editor') {
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'created_on');
-                            $field->addAttribute('Type', 'DATE');
-                            $field->addAttribute('Null', 'NO');
-
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'created_by');
-                            $field->addAttribute('Type', 'INT(11)');
-                            $field->addAttribute('Null', 'NO');
-
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'modified_on');
-                            $field->addAttribute('Type', 'DATE');
-                            $field->addAttribute('Null', 'YES');
-
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'modified_by');
-                            $field->addAttribute('Type', 'INT(11)');
-                            $field->addAttribute('Null', 'YES');
-                        } elseif ($fieldType == 'Checkout') {
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'locked_by');
-                            $field->addAttribute('Type', 'INT(11)');
-                            $field->addAttribute('Null', 'YES');
-
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'locked_on');
-                            $field->addAttribute('Type', 'DATE');
-                            $field->addAttribute('Null', 'YES');
-                        } elseif ($fieldType == 'Asset') {
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'asset_id');
-                            $field->addAttribute('Type', 'INT(11)');
-                            $field->addAttribute('Null', 'No');
-                        } else {
-                            $field = $table->addChild('field');
-                            $field->addAttribute('Field', 'access');
-                            $field->addAttribute('Type', 'INT(11)');
-                            $field->addAttribute('Null', 'No');
-                        }
-                    }
-
-                    while ('yes' == $this->io->choice('Do you want to create a new field?', ['yes', 'no'], 'yes')) {
-                        $field = $table->addChild('field');
-
-                        $field->addAttribute('Field', $this->io->ask('Please enter the field name'));
-
-                        $types = $this->io->choice(
-                            'Please select the field name',
-                            ['INT(11)', 'VARCHAR(255)', 'TEXT', 'DATE', 'OTHER'],
-                            'VARCHAR(255)'
-                        );
-
-                        if ($types == 'OTHER') {
-                            $field->addAttribute('Type', $this->io->ask('Please enter the field type'));
-                        } else {
-                            $field->addAttribute('Type', $types);
-                        }
-
-                        $field->addAttribute('Null', $this->io->choice('Field Null?', ['yes', 'no'], 'no'));
+                    foreach ($buildField as $name => $value) {
+                        $field->addAttribute($name, $value);
                     }
                 }
 
@@ -297,20 +370,6 @@ class Entity extends AbstractComponent
 
                 //TODO: Disable Model and Layouts
             }
-        }
-    }
-
-    /**
-     * @@inheritdoc
-     */
-    protected function execute(InputInterface $input, OutputInterface $output)
-    {
-        $sections = ['admin', 'site'];
-
-        if ($input->getOption('frontend')) {
-            $sections = ['site'];
-        } elseif ($input->getOption('backend')) {
-            $sections = ['admin'];
         }
 
         $this->container = \FOF30\Container\Container::getInstance($this->component->comName, [

@@ -21,6 +21,10 @@ class Init extends BaseCommand
 
     protected $ignoreFof;
 
+    protected $composer;
+
+    protected $composerList;
+
     /**
      * @@inheritdoc
      */
@@ -81,6 +85,7 @@ class Init extends BaseCommand
 
         $this->ignoreDemo = true;
         $this->ignoreFof  = true;
+        $this->composer   = true;
         // [/Default]
 
         try {
@@ -224,6 +229,20 @@ class Init extends BaseCommand
         }
 
         $this->ignoreFof = $this->io->confirm('Add the fof30 in .gitignore?');
+
+        $this->composer = $this->io->confirm('Create the composer.json?');
+
+        $this->composerList = (object) [
+            'name'        => $this->config->name,
+            'description' => $this->config->infos->description,
+            'type'        => 'project',
+            'license'     => $this->config->infos->licence,
+            'authors'     => [
+                (object) [
+                'name'  => $this->config->infos->author,
+                'email' => $this->config->infos->email,
+            ]]
+        ];
     }
 
     /**
@@ -260,6 +279,8 @@ class Init extends BaseCommand
                 }
             }
 
+
+
             if (isset($skips)) {
                 $this->io->note(
                     array_merge(['Skip directory creation, those directories already exists'], $skips)
@@ -287,6 +308,14 @@ class Init extends BaseCommand
                     'The .gitignore could not be created',
                     $path . 'README.md'
                 ]);
+            }
+
+            if ($this->composer
+                && !@file_put_contents($path . 'composer.json', json_encode($this->composerList, JSON_PRETTY_PRINT))) {
+                throw new OutputException([
+                    'Action canceled, the composer file cannot be created, please check.',
+                    $path . 'composer.json'
+                ], 'error');
             }
 
             if (!@file_put_contents($path . '.jbuilder', json_encode($this->config, JSON_PRETTY_PRINT))) {
